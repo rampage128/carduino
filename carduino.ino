@@ -100,7 +100,7 @@ void readCan(long unsigned int id, unsigned char len, unsigned char rxBuf[8]) {
 				gearBox.payload()->gearNum = ((int8_t) gear - 120) / 8;
 			}
 
-			gearBox.payload()->flags.isSynchroRev = (rxBuf[0] & B01000000)
+			gearBox.payload()->isSynchroRev = (rxBuf[0] & B01000000)
 					== B01000000;
 			break;
 		}

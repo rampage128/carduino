@@ -21,47 +21,47 @@ class NissanClimateControl {
 
 			switch (rxBuf[2]) {
 			case (0x80):
-				climateControl.payload()->flags.isAirductWindshield = 0;
-				climateControl.payload()->flags.isAirductFace = 0;
-				climateControl.payload()->flags.isAirductFeet = 0;
+				climateControl.payload()->isAirductWindshield = 0;
+				climateControl.payload()->isAirductFace = 0;
+				climateControl.payload()->isAirductFeet = 0;
 				break;
 			case (0x98):
-				climateControl.payload()->flags.isAirductWindshield = 0;
-				climateControl.payload()->flags.isAirductFace = 0;
-				climateControl.payload()->flags.isAirductFeet = 1;
+				climateControl.payload()->isAirductWindshield = 0;
+				climateControl.payload()->isAirductFace = 0;
+				climateControl.payload()->isAirductFeet = 1;
 				break;
 			case (0xA0):
-				climateControl.payload()->flags.isAirductWindshield = 1;
-				climateControl.payload()->flags.isAirductFace = 0;
-				climateControl.payload()->flags.isAirductFeet = 1;
+				climateControl.payload()->isAirductWindshield = 1;
+				climateControl.payload()->isAirductFace = 0;
+				climateControl.payload()->isAirductFeet = 1;
 				break;
 			case (0x88):
-				climateControl.payload()->flags.isAirductWindshield = 0;
-				climateControl.payload()->flags.isAirductFace = 1;
-				climateControl.payload()->flags.isAirductFeet = 0;
+				climateControl.payload()->isAirductWindshield = 0;
+				climateControl.payload()->isAirductFace = 1;
+				climateControl.payload()->isAirductFeet = 0;
 				break;
 			case (0x90):
-				climateControl.payload()->flags.isAirductWindshield = 0;
-				climateControl.payload()->flags.isAirductFace = 1;
-				climateControl.payload()->flags.isAirductFeet = 1;
+				climateControl.payload()->isAirductWindshield = 0;
+				climateControl.payload()->isAirductFace = 1;
+				climateControl.payload()->isAirductFeet = 1;
 				break;
 			}
 
-			climateControl.payload()->flags.isWindshieldHeating = (rxBuf[3]
+			climateControl.payload()->isWindshieldHeating = (rxBuf[3]
 					& B10000000) == B10000000;
-			climateControl.payload()->flags.isRecirculation = (rxBuf[3]
+			climateControl.payload()->isRecirculation = (rxBuf[3]
 					& B00000011) == B00000001;
-			climateControl.payload()->flags.isAuto = (rxBuf[1] & B00001110)
+			climateControl.payload()->isAuto = (rxBuf[1] & B00001110)
 					== B00000110;
 			break;
 		// AC AUTO AMP 3
 		case (0x54C):
-			climateControl.payload()->flags.isAcOn = (rxBuf[2] & B10000000)
+			climateControl.payload()->isAcOn = (rxBuf[2] & B10000000)
 					== B10000000;
 			break;
 		// AC AUTO AMP 4
 		case (0x625):
-			climateControl.payload()->flags.isRearWindowHeating = (rxBuf[0]
+			climateControl.payload()->isRearWindowHeating = (rxBuf[0]
 					& B00000001) == B00000001;
 			break;
 		}
