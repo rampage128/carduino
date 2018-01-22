@@ -5,3 +5,11 @@ Release/*
 .cproject
 .project
 sloeber.ino.cpp
+
+### Visual Studio ###
+
+.vs/
+__vm/
+*.sln
+*.vcxproj
+*.vcxproj.filters
