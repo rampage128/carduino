@@ -11,7 +11,7 @@ SerialPacket statusInitError(0x65, 0x01);
 SerialDataPacket<unsigned long> baudRateChange(0x65, 0x01);
 
 SerialDataPacket<ClimateControl> climateControl(0x73, 0x63);
-SerialDataPacket<GearBox> gearBox(0x73, 0x67);
+SerialDataPacket<DriveTrain> gearBox(0x73, 0x67);
 
 Can can(2, 10);
 bool canSniffing = false;
