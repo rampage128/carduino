@@ -51,7 +51,8 @@ public:
 		if (!digitalRead(canInterruptPin)) {
 			this->inTransaction = true;
 
-			this->can->readMsgBuf(&this->currentCanPacketId, &this->currentCanPacketLength, this->currentCanPacketData);
+			this->can->readMsgBuf(&this->currentCanPacketId,
+					&this->currentCanPacketLength, this->currentCanPacketData);
 			if (this->isSniffing) {
 				this->sniff();
 			}
@@ -71,28 +72,32 @@ public:
 	}
 
 	template<typename T>
-	void updateFromCan(long unsigned int canId, SerialDataPacket<T> * packet, void (*callback)(long unsigned int id, unsigned char len, unsigned char data[8], T * carSystem)) {
+	void updateFromCan(long unsigned int canId, SerialDataPacket<T> * packet,
+			void (*callback)(long unsigned int id, unsigned char len,
+					unsigned char data[8], T * carSystem)) {
 		if (!this->inTransaction) {
 			/*
 			 * Intentionally return silently.
-			 * beginTransaction only starts a transaction if a can-packet was received.
+			 * beginTransaction only starts a transaction if a can-packet was
+			 * received.
 			 */
 			return;
 		}
 
 		if (canId == this->currentCanPacketId) {
-      int dataLength = sizeof(T);
-      T * carSystem = new T();
-      memcpy(carSystem, packet->payload(), dataLength);
-      
-			callback(this->currentCanPacketId, this->currentCanPacketLength, this->currentCanPacketData, carSystem);
-      
+			int dataLength = sizeof(T);
+			T * carSystem = new T();
+			memcpy(carSystem, packet->payload(), dataLength);
+
+			callback(this->currentCanPacketId, this->currentCanPacketLength,
+					this->currentCanPacketData, carSystem);
+
 			if (memcmp(carSystem, packet->payload(), dataLength) != 0) {
-        memcpy(packet->payload(), carSystem, dataLength);
+				memcpy(packet->payload(), carSystem, dataLength);
 				packet->serialize(this->serial);
 			}
-     
-      delete carSystem;
+
+			delete carSystem;
 		}
 	}
 
@@ -108,18 +113,18 @@ private:
 	boolean isSniffing = false;
 	SerialDataPacket<CanData> * snifferPacket;
 
-
 	bool inTransaction = false;
 	long unsigned int currentCanPacketId = 0;
 	uint8_t currentCanPacketLength = 0;
 	unsigned char currentCanPacketData[8];
 
 	void sniff() {
-		this->snifferPacket->payload()->metaData.canId = this->currentCanPacketId;
+		this->snifferPacket->payload()->metaData.canId =
+				this->currentCanPacketId;
 		for (uint8_t i = 0; i < 8; i++) {
 			uint8_t data = 0x00;
 			if (i < this->currentCanPacketLength) {
-				 data = this->currentCanPacketData[i];
+				data = this->currentCanPacketData[i];
 			}
 			this->snifferPacket->payload()->rxBuf[i] = data;
 		}

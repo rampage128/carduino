@@ -17,13 +17,15 @@ union ClimateControl {
 	BitFieldMember<8, 8> fanLevel;
 	BitFieldMember<16, 8> desiredTemperature;
 };
-SerialDataPacket<ClimateControl>* climateControl = new SerialDataPacket<ClimateControl>(0x73, 0x63);
+SerialDataPacket<ClimateControl>* climateControl = new SerialDataPacket<
+		ClimateControl>(0x73, 0x63);
 
 union DriveTrain {
 	unsigned char data[2];
 	BitFieldMember<0, 8> gearNum;
 	BitFieldMember<8, 1> isSynchroRev;
 };
-SerialDataPacket<DriveTrain>* driveTrain = new SerialDataPacket<DriveTrain>(0x73, 0x67);
+SerialDataPacket<DriveTrain>* driveTrain = new SerialDataPacket<DriveTrain>(
+		0x73, 0x67);
 
 #endif /* CARSYSTEMS_H_ */

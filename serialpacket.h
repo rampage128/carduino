@@ -46,7 +46,8 @@ public:
 		delete _serialBuffer;
 	}
 	void read(Stream &serial,
-			void (*callback)(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer)) {
+			void (*callback)(uint8_t type, uint8_t id,
+					BinaryBuffer *payloadBuffer)) {
 		int packetEndIndex = -1;
 		while (serial.available() && _serialBuffer->available() > 0) {
 			uint8_t data = serial.read();
@@ -68,12 +69,13 @@ public:
 				if (_serialBuffer->getPosition() < packetEndIndex) {
 					uint8_t payloadLength = _serialBuffer->readByte().data;
 					payloadBuffer = new BinaryBuffer(payloadLength);
-					if (payloadBuffer->available() > 0 && packetEndIndex - _serialBuffer->getPosition() > 0) {
+					if (payloadBuffer->available() > 0
+							&& packetEndIndex - _serialBuffer->getPosition()
+									> 0) {
 						payloadBuffer->write(_serialBuffer);
 						payloadBuffer->goTo(0);
 					}
-				}
-				else {
+				} else {
 					payloadBuffer = new BinaryBuffer(0);
 				}
 

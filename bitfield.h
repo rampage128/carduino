@@ -16,8 +16,7 @@ struct BitFieldMember {
 	typedef BitFieldMember<firstBit, bitSize> self_t;
 	typedef unsigned char uchar;
 	enum {
-		lastBit = firstBit + bitSize - 1,
-		mask = (1ULL << bitSize) - 1
+		lastBit = firstBit + bitSize - 1, mask = (1ULL << bitSize) - 1
 	};
 	uchar *selfArray() {
 		return reinterpret_cast<uchar *>(this);

@@ -8,7 +8,7 @@
 #include <AnalogMultiButton.h>
 
 class NissanClimateControl {
-  public:
+public:
 	void push(uint8_t buttonId, BinaryBuffer *payloadBuffer) {
 		switch (buttonId) {
 		case 0x01: // OFF BUTTON
@@ -48,35 +48,39 @@ class NissanClimateControl {
 			break;
 		}
 	}
-    void broadcast(Can &can) {
-    	can.write(0x540, 0, sizeof(climateCanSignal1), (uint8_t*)climateCanSignal1.data);
-    	can.write(0x541, 0, sizeof(climateCanSignal2), (uint8_t*)climateCanSignal2.data);
-    	can.write(0x542, 0, sizeof(climateCanSignal3), (uint8_t*)climateCanSignal3.data);
+	void broadcast(Can &can) {
+		can.write(0x540, 0, sizeof(climateCanSignal1),
+				(uint8_t*) climateCanSignal1.data);
+		can.write(0x541, 0, sizeof(climateCanSignal2),
+				(uint8_t*) climateCanSignal2.data);
+		can.write(0x542, 0, sizeof(climateCanSignal3),
+				(uint8_t*) climateCanSignal3.data);
 
-    	// reset rear heating flag after sending ... this is a special case.
-    	climateCanSignal2.rearWindowHeaterButton = 0;
+		// reset rear heating flag after sending ... this is a special case.
+		climateCanSignal2.rearWindowHeaterButton = 0;
 
-    	if (climateCanSignal1.roll < 3) {
-    		climateCanSignal1.roll += 1;
-    		climateCanSignal2.roll += 1;
-    		climateCanSignal3.roll += 1;
-    	}
-    	else {
-    		climateCanSignal1.roll = 0;
-    		climateCanSignal2.roll = 0;
-    		climateCanSignal3.roll = 0;
-    	}
-    }
+		if (climateCanSignal1.roll < 3) {
+			climateCanSignal1.roll += 1;
+			climateCanSignal2.roll += 1;
+			climateCanSignal3.roll += 1;
+		} else {
+			climateCanSignal1.roll = 0;
+			climateCanSignal2.roll = 0;
+			climateCanSignal3.roll = 0;
+		}
+	}
 private:
 	union {
-		unsigned char data[8] = { 0x20, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+		unsigned char data[8] =
+				{ 0x20, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		BitFieldMember<0, 8> identifier1;
 		BitFieldMember<8, 8> identifier2;
 		BitFieldMember<56, 8> roll;
 	} climateCanSignal1;
 
 	union {
-		unsigned char data[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+		unsigned char data[8] =
+				{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		BitFieldMember<3, 1> modeButton;
 		BitFieldMember<7, 1> windshieldButton;
 		BitFieldMember<8, 1> rearWindowHeaterButton;
@@ -90,7 +94,8 @@ private:
 	} climateCanSignal2;
 
 	union {
-		unsigned char data[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+		unsigned char data[8] =
+				{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 		BitFieldMember<0, 8> fanSpeed;
 		BitFieldMember<8, 8> desiredTemperature;
 		BitFieldMember<56, 8> roll;
@@ -98,7 +103,7 @@ private:
 };
 
 class NissanSteeringControl {
-  public:
+public:
 	NissanSteeringControl(uint8_t pin1, uint8_t pin2) {
 		int buttonArray1[] = { 0, 210, 416, 620, 830 };
 		int buttonArray2[] = { 0, 210, 416, 620 };
@@ -158,10 +163,10 @@ class NissanSteeringControl {
 			_serialPacket->serialize(serial);
 		}
 	}
-  private:
-    AnalogMultiButton *_buttons1;
-    AnalogMultiButton *_buttons2;
-    SerialDataPacket<uint8_t> *_serialPacket;
+private:
+	AnalogMultiButton *_buttons1;
+	AnalogMultiButton *_buttons2;
+	SerialDataPacket<uint8_t> *_serialPacket;
 };
 
 #endif /* _370Z_H_ */
