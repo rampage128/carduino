@@ -8,13 +8,9 @@
 
 SerialPacket statusInitSuccess(0x61, 0x01);
 SerialPacket statusInitError(0x65, 0x01);
-SerialDataPacket<unsigned long> baudRateChange(0x65, 0x01);
+SerialDataPacket<unsigned long> baudRateChange(0x61, 0x02);
 
-SerialDataPacket<ClimateControl> climateControl(0x73, 0x63);
-SerialDataPacket<DriveTrain> gearBox(0x73, 0x67);
-
-Can can(2, 10);
-bool canSniffing = false;
+Can can(&Serial, 2, 10);
 SerialReader serialReader(128);
 
 NissanClimateControl nissanClimateControl;
@@ -25,26 +21,33 @@ void setup() {
 	Serial.begin(115200);
 
 	if (can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ)) {
-		statusInitSuccess.serialize(Serial);
+		statusInitSuccess.serialize(&Serial);
 	}
 	// Notify serial on error
 	else {
-		statusInitError.serialize(Serial);
+		statusInitError.serialize(&Serial);
 	}
 }
 
 // The loop function is called in an endless loop
 void loop() {
-	can.update(Serial, readCan);
-	nissanSteeringControl.check(Serial);
+	can.beginTransaction();
+  can.updateFromCan<DriveTrain>(0x421, driveTrain, updateDriveTrain);
+	can.updateFromCan<ClimateControl>(0x54A, climateControl, updateClimateControl);
+  can.updateFromCan<ClimateControl>(0x54B, climateControl, updateClimateControl);
+  can.updateFromCan<ClimateControl>(0x54C, climateControl, updateClimateControl);
+  can.updateFromCan<ClimateControl>(0x625, climateControl, updateClimateControl);
+	can.endTransaction();
+
+	nissanSteeringControl.check(&Serial);
 
 	every(250) {
-		climateControl.serialize(Serial);
 		nissanClimateControl.broadcast(can);
 	}
 
 	every(1000) {
-		gearBox.serialize(Serial);
+		climateControl->serialize(&Serial);
+		driveTrain->serialize(&Serial);
 	}
 }
 
@@ -66,7 +69,7 @@ void readSerial(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer) {
 				BinaryData::LongResult result = payloadBuffer->readLong();
 				if (result.state == BinaryData::OK) {
 					baudRateChange.payload(htonl(result.data));
-					baudRateChange.serialize(Serial);
+					baudRateChange.serialize(&Serial);
 					Serial.flush();
 					Serial.end();
 					Serial.begin(result.data);
@@ -84,25 +87,70 @@ void readSerial(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer) {
 	}
 }
 
-void readCan(long unsigned int id, unsigned char len, unsigned char rxBuf[8]) {
-	nissanClimateControl.read(climateControl, id, len, rxBuf);
+void updateClimateControl(long unsigned int id, unsigned char len, unsigned char data[8], ClimateControl * climateControl) {
 	switch(id) {
-			// GEARBOX
-		case (0x421): {
-			uint8_t gear = rxBuf[0];
+	// AC AUTO AMP 1
+	case (0x54A):
+		climateControl->desiredTemperature = data[4];
+		break;
+	// AC AUTO AMP 2
+	case (0x54B):
+		climateControl->fanLevel = (data[4] - 4) / 8;
 
-			// gear is N (0) or R (-1)
-			if (gear < 0x80) {
-				gearBox.payload()->gearNum = ((int8_t) gear / 8) - 3;
-			}
-			// gear is 1-6
-			else {
-				gearBox.payload()->gearNum = ((int8_t) gear - 120) / 8;
-			}
-
-			gearBox.payload()->isSynchroRev = (rxBuf[0] & B01000000)
-					== B01000000;
+		switch (data[2]) {
+		case (0x80):
+			climateControl->isAirductWindshield = 0;
+			climateControl->isAirductFace = 0;
+			climateControl->isAirductFeet = 0;
+			break;
+		case (0x98):
+			climateControl->isAirductWindshield = 0;
+			climateControl->isAirductFace = 0;
+			climateControl->isAirductFeet = 1;
+			break;
+		case (0xA0):
+			climateControl->isAirductWindshield = 1;
+			climateControl->isAirductFace = 0;
+			climateControl->isAirductFeet = 1;
+			break;
+		case (0x88):
+			climateControl->isAirductWindshield = 0;
+			climateControl->isAirductFace = 1;
+			climateControl->isAirductFeet = 0;
+			break;
+		case (0x90):
+			climateControl->isAirductWindshield = 0;
+			climateControl->isAirductFace = 1;
+			climateControl->isAirductFeet = 1;
 			break;
 		}
+
+		climateControl->isWindshieldHeating = (data[3] & B10000000) == B10000000;
+		climateControl->isRecirculation = (data[3] & B00000011) == B00000001;
+		climateControl->isAuto = (data[1] & B00001110) == B00000110;
+		break;
+	// AC AUTO AMP 3
+	case (0x54C):
+		climateControl->isAcOn = (data[2] & B10000000) == B10000000;
+		break;
+	// AC AUTO AMP 4
+	case (0x625):
+		climateControl->isRearWindowHeating = (data[0] & B00000001) == B00000001;
+		break;
 	}
+}
+
+void updateDriveTrain(long unsigned int id, unsigned char len, unsigned char data[8], DriveTrain * driveTrain) {
+	uint8_t gear = data[0];
+
+	// gear is N (0) or R (-1)
+	if (gear < 0x80) {
+		driveTrain->gearNum = ((int8_t) gear / 8) - 3;
+	}
+	// gear is 1-6
+	else {
+		driveTrain->gearNum = ((int8_t) gear - 120) / 8;
+	}
+
+	driveTrain->isSynchroRev = (data[1] & B01000000) == B01000000;
 }

@@ -11,15 +11,15 @@ public:
 		_type = type;
 	}
 
-	void serialize(Stream &serial) {
-		serial.write("{");
-		serial.write(_type);
-		serial.write(_id);
+	void serialize(Stream * serial) {
+		serial->write("{");
+		serial->write(_type);
+		serial->write(_id);
 		if (sizeof(_payload) > 0) {
-			serial.write(sizeof(_payload));
-			serial.write((byte*) &_payload, sizeof(_payload));
+			serial->write(sizeof(_payload));
+			serial->write((byte*) &_payload, sizeof(_payload));
 		}
-		serial.write("}");
+		serial->write("}");
 	}
 
 	T *payload() {

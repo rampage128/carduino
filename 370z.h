@@ -9,63 +9,6 @@
 
 class NissanClimateControl {
   public:
-	void read(SerialDataPacket<ClimateControl> &climateControl, long unsigned int id, unsigned char len, unsigned char rxBuf[8]) {
-		switch (id) {
-		// AC AUTO AMP 1
-		case (0x54A):
-			climateControl.payload()->desiredTemperature = rxBuf[4];
-			break;
-		// AC AUTO AMP 2
-		case (0x54B):
-			climateControl.payload()->fanLevel = (rxBuf[4] - 4) / 8;
-
-			switch (rxBuf[2]) {
-			case (0x80):
-				climateControl.payload()->isAirductWindshield = 0;
-				climateControl.payload()->isAirductFace = 0;
-				climateControl.payload()->isAirductFeet = 0;
-				break;
-			case (0x98):
-				climateControl.payload()->isAirductWindshield = 0;
-				climateControl.payload()->isAirductFace = 0;
-				climateControl.payload()->isAirductFeet = 1;
-				break;
-			case (0xA0):
-				climateControl.payload()->isAirductWindshield = 1;
-				climateControl.payload()->isAirductFace = 0;
-				climateControl.payload()->isAirductFeet = 1;
-				break;
-			case (0x88):
-				climateControl.payload()->isAirductWindshield = 0;
-				climateControl.payload()->isAirductFace = 1;
-				climateControl.payload()->isAirductFeet = 0;
-				break;
-			case (0x90):
-				climateControl.payload()->isAirductWindshield = 0;
-				climateControl.payload()->isAirductFace = 1;
-				climateControl.payload()->isAirductFeet = 1;
-				break;
-			}
-
-			climateControl.payload()->isWindshieldHeating = (rxBuf[3]
-					& B10000000) == B10000000;
-			climateControl.payload()->isRecirculation = (rxBuf[3]
-					& B00000011) == B00000001;
-			climateControl.payload()->isAuto = (rxBuf[1] & B00001110)
-					== B00000110;
-			break;
-		// AC AUTO AMP 3
-		case (0x54C):
-			climateControl.payload()->isAcOn = (rxBuf[2] & B10000000)
-					== B10000000;
-			break;
-		// AC AUTO AMP 4
-		case (0x625):
-			climateControl.payload()->isRearWindowHeating = (rxBuf[0]
-					& B00000001) == B00000001;
-			break;
-		}
-	}
 	void push(uint8_t buttonId, BinaryBuffer *payloadBuffer) {
 		switch (buttonId) {
 		case 0x01: // OFF BUTTON
@@ -163,7 +106,7 @@ class NissanSteeringControl {
 		_buttons2 = new AnalogMultiButton(pin2, 4, buttonArray2);
 		_serialPacket = new SerialDataPacket<uint8_t>(0x73, 0x72);
 	}
-	void check(Stream &serial) {
+	void check(Stream * serial) {
 		_buttons1->update();
 
 		uint8_t buttonId = 0;

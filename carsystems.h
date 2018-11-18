@@ -17,55 +17,13 @@ union ClimateControl {
 	BitFieldMember<8, 8> fanLevel;
 	BitFieldMember<16, 8> desiredTemperature;
 };
+SerialDataPacket<ClimateControl>* climateControl = new SerialDataPacket<ClimateControl>(0x73, 0x63);
 
 union DriveTrain {
 	unsigned char data[2];
-	int8_t gearNum;
+	BitFieldMember<0, 8> gearNum;
 	BitFieldMember<8, 1> isSynchroRev;
 };
-
-class CarSystemManager {
-public:
-	enum Systems { ClimateControlSystem, DriveTrainSystem };
-
-	CarSystemManager(Stream &serial) {
-		this->serial = serial;
-	}
-
-	template<typename T>
-	T getCarSystemData(Systems key) {
-		SerialDataPacket<T> * packet = this->template getCarSystem<T>(key);
-
-		return *(packet->payload());
-	}
-
-	template<typename T>
-	void updateCarSystem(Systems key, T carsystem, boolean send) {
-		SerialDataPacket<T> * packet = this->template getCarSystem<T>(key);
-
-		if (packet != NULL && memcmp(carsystem, packet->payload(), sizeof(carsystem)) == 0) {
-			packet->payload.data = carsystem.data;
-			if (send) {
-				packet->serialize(this->serial);
-			}
-		}
-	}
-
-	template<typename T>
-	SerialDataPacket<T> * getCarSystem(Systems key) {
-		switch (key) {
-		case ClimateControlSystem:
-			return this->climateControl;
-		case DriveTrainSystem:
-			return this->driveTrain;
-		}
-
-		return NULL;
-	}
-private:
-	SerialDataPacket<ClimateControl>* climateControl 	= new climateControl(0x73, 0x63);
-	SerialDataPacket<DriveTrain>* driveTrain 			= new driveTrain(0x73, 0x67);
-	Stream * serial;
-};
+SerialDataPacket<DriveTrain>* driveTrain = new SerialDataPacket<DriveTrain>(0x73, 0x67);
 
 #endif /* CARSYSTEMS_H_ */
