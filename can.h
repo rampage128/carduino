@@ -15,8 +15,8 @@ struct CanData {
 	union {
 		unsigned char data[4];
 		BitFieldMember<0, 32> canId;
-	} metaData;
-	uint8_t rxBuf[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	} header;
+	uint8_t data[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 };
 static SerialDataPacket<CanData> snifferPacket(0x62, 0x6d);
 
@@ -124,13 +124,13 @@ private:
 	unsigned char currentCanPacketData[8];
 
 	void sniff() {
-		snifferPacket.payload()->metaData.canId = this->currentCanPacketId;
+		snifferPacket.payload()->header.canId = this->currentCanPacketId;
 		for (uint8_t i = 0; i < 8; i++) {
 			uint8_t data = 0x00;
 			if (i < this->currentCanPacketLength) {
 				data = this->currentCanPacketData[i];
 			}
-			snifferPacket.payload()->rxBuf[i] = data;
+			snifferPacket.payload()->data[i] = data;
 		}
 		snifferPacket.serialize(this->serial);
 	}
