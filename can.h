@@ -18,6 +18,7 @@ struct CanData {
 	} metaData;
 	uint8_t rxBuf[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 };
+static SerialDataPacket<CanData> snifferPacket(0x62, 0x6d);
 
 class Can {
 public:
@@ -25,11 +26,9 @@ public:
 		this->serial = serial;
 		this->can = new MCP_CAN(canCsPin);
 		this->canInterruptPin = canInterruptPin;
-		this->snifferPacket = new SerialDataPacket<CanData>(0x62, 0x6d);
 	}
 	~Can() {
 		delete this->can;
-		delete this->snifferPacket;
 	}
 	boolean setup(uint8_t mode, uint8_t speed, uint8_t clock) {
 		uint8_t canStatus = this->can->begin(mode, speed, clock);
@@ -118,7 +117,6 @@ private:
 	uint8_t canInterruptPin = 2;
 	boolean isInitialized = false;
 	boolean isSniffing = false;
-	SerialDataPacket<CanData> * snifferPacket;
 
 	bool inTransaction = false;
 	long unsigned int currentCanPacketId = 0;
@@ -126,16 +124,15 @@ private:
 	unsigned char currentCanPacketData[8];
 
 	void sniff() {
-		this->snifferPacket->payload()->metaData.canId =
-				this->currentCanPacketId;
+		snifferPacket.payload()->metaData.canId = this->currentCanPacketId;
 		for (uint8_t i = 0; i < 8; i++) {
 			uint8_t data = 0x00;
 			if (i < this->currentCanPacketLength) {
 				data = this->currentCanPacketData[i];
 			}
-			this->snifferPacket->payload()->rxBuf[i] = data;
+			snifferPacket.payload()->rxBuf[i] = data;
 		}
-		this->snifferPacket->serialize(this->serial);
+		snifferPacket.serialize(this->serial);
 	}
 };
 
