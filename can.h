@@ -3,9 +3,13 @@
 
 #include <mcp_can.h>
 #include "bitfield.h"
+#include "serialpacket.h"
 
-SerialPacket canInitError(0x65, 0x32);
-SerialPacket canTransactionError(0x65, 0x33);
+static SerialPacket statusInitSuccess(0x61, 0x30);
+static SerialPacket statusInitError(0x65, 0x30);
+
+static SerialPacket canNotInitializedError(0x65, 0x33);
+static SerialPacket canTransactionError(0x65, 0x34);
 
 struct CanData {
 	union {
@@ -33,13 +37,16 @@ public:
 			this->can->setMode(MCP_NORMAL);
 			pinMode(this->canInterruptPin, INPUT);
 			this->isInitialized = true;
+			statusInitSuccess.serialize(&Serial);
+		} else {
+			statusInitError.serialize(&Serial);
 		}
 		return this->isInitialized;
 	}
 
 	void beginTransaction() {
 		if (!this->isInitialized) {
-			canInitError.serialize(this->serial);
+			canNotInitializedError.serialize(this->serial);
 			return;
 		}
 
