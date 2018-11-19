@@ -8,8 +8,8 @@
 static SerialPacket statusInitSuccess(0x61, 0x30);
 static SerialPacket statusInitError(0x65, 0x30);
 
-static SerialPacket canNotInitializedError(0x65, 0x33);
-static SerialPacket canTransactionError(0x65, 0x34);
+static SerialPacket canNotInitializedError(0x65, 0x31);
+static SerialPacket canTransactionError(0x65, 0x32);
 
 struct CanData {
 	union {
