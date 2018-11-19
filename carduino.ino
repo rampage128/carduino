@@ -109,6 +109,16 @@ void updateClimateControl(long unsigned int id, unsigned char len,
 			climateControl->isAirductFace = 0;
 			climateControl->isAirductFeet = 0;
 			break;
+		case (0x88):
+			climateControl->isAirductWindshield = 0;
+			climateControl->isAirductFace = 1;
+			climateControl->isAirductFeet = 0;
+			break;
+		case (0x90):
+			climateControl->isAirductWindshield = 0;
+			climateControl->isAirductFace = 1;
+			climateControl->isAirductFeet = 1;
+			break;
 		case (0x98):
 			climateControl->isAirductWindshield = 0;
 			climateControl->isAirductFace = 0;
@@ -119,15 +129,10 @@ void updateClimateControl(long unsigned int id, unsigned char len,
 			climateControl->isAirductFace = 0;
 			climateControl->isAirductFeet = 1;
 			break;
-		case (0x88):
-			climateControl->isAirductWindshield = 0;
-			climateControl->isAirductFace = 1;
+		case (0xA8):
+			climateControl->isAirductWindshield = 1;
+			climateControl->isAirductFace = 0;
 			climateControl->isAirductFeet = 0;
-			break;
-		case (0x90):
-			climateControl->isAirductWindshield = 0;
-			climateControl->isAirductFace = 1;
-			climateControl->isAirductFeet = 1;
 			break;
 		}
 
