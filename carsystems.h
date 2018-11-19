@@ -5,7 +5,7 @@
 #include "serialpacket.h"
 
 union ClimateControl {
-	unsigned char data[3];
+	unsigned char data[3] = { 0x00, 0x00, 0x00 };
 	BitFieldMember<0, 1> isAcOn;
 	BitFieldMember<1, 1> isAuto;
 	BitFieldMember<2, 1> isAirductWindshield;
@@ -21,7 +21,7 @@ SerialDataPacket<ClimateControl>* climateControl = new SerialDataPacket<
 		ClimateControl>(0x73, 0x63);
 
 union DriveTrain {
-	unsigned char data[2];
+	unsigned char data[2] = { 0x00, 0x00 };
 	BitFieldMember<0, 8> gearNum;
 	BitFieldMember<8, 1> isSynchroRev;
 };
