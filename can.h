@@ -51,7 +51,7 @@ public:
 		}
 
 		if (this->inTransaction) {
-			SerialPacket statusInitError(0x65, 0x33);
+			canTransactionError.serialize(this->serial);
 			return;
 		}
 
