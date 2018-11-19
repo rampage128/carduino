@@ -12,14 +12,12 @@ SerialReader serialReader(128, &can);
 NissanClimateControl nissanClimateControl;
 NissanSteeringControl nissanSteeringControl(A6, A7);
 
-//The setup function is called once at startup of the sketch
 void setup() {
 	Serial.begin(115200);
 
 	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
 }
 
-// The loop function is called in an endless loop
 void loop() {
 	can.beginTransaction();
 	can.updateFromCan<DriveTrain>(0x421, driveTrain, updateDriveTrain);
