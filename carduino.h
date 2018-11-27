@@ -4,6 +4,12 @@
 #include "serial.h"
 #include "can.h"
 
+union CarduinoEvent {
+	unsigned char data[1] = { 0x00 };
+	BitFieldMember<0, 8> eventNum;
+};
+static SerialDataPacket<CarduinoEvent> carduinoEvent (0x73, 0x72);
+
 class Carduino: public SerialListener {
 private:
 	SerialReader * serialReader;
@@ -23,6 +29,10 @@ public:
 	}
 	void readSerial() {
 		this->serialReader->read(this);
+	}
+	void triggerEvent(uint8_t eventNum) {
+		carduinoEvent.payload()->eventNum = eventNum;
+		carduinoEvent.serialize(this->serial);
 	}
 	void addCan(Can * can) {
 		this->can = can;

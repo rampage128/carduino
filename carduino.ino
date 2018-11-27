@@ -31,7 +31,7 @@ void loop() {
 			updateClimateControl);
 	can.endTransaction();
 
-	nissanSteeringControl.check(&Serial);
+	nissanSteeringControl.check(&carduino);
 
 	every(250) {
 		nissanClimateControl.broadcast(can);

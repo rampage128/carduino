@@ -2,6 +2,7 @@
 #define _370Z_H_
 
 #include "can.h"
+#include "carduino.h"
 #include "bitfield.h"
 #include "binarydata.h"
 #include "carsystems.h"
@@ -9,7 +10,7 @@
 
 class NissanClimateControl {
 public:
-	void push(uint8_t buttonId, BinaryBuffer *payloadBuffer) {
+	void push(uint8_t buttonId, BinaryBuffer * payloadBuffer) {
 		switch (buttonId) {
 		case 0x01: // OFF BUTTON
 			climateCanSignal2.offButton ^= 1;
@@ -107,66 +108,57 @@ public:
 	NissanSteeringControl(uint8_t pin1, uint8_t pin2) {
 		int buttonArray1[] = { 0, 210, 416, 620, 830 };
 		int buttonArray2[] = { 0, 210, 416, 620 };
-		_buttons1 = new AnalogMultiButton(pin1, 5, buttonArray1);
-		_buttons2 = new AnalogMultiButton(pin2, 4, buttonArray2);
-		_serialPacket = new SerialDataPacket<uint8_t>(0x73, 0x72);
+		this->buttons1 = new AnalogMultiButton(pin1, 5, buttonArray1);
+		this->buttons2 = new AnalogMultiButton(pin2, 4, buttonArray2);
 	}
-	void check(Stream * serial) {
-		_buttons1->update();
-
-		uint8_t buttonId = 0;
+	void check(Carduino * carduino) {
+		this->buttons1->update();
 
 		// SOURCE
-		if (_buttons1->onReleaseBefore(0, 500)) {
-			buttonId = 1;
-		} else if (_buttons1->onPressAfter(0, 500)) {
-			buttonId = 2;
+		if (this->buttons1->onReleaseBefore(0, 500)) {
+			carduino->triggerEvent(1);
+		} else if (buttons1->onPressAfter(0, 500)) {
+			carduino->triggerEvent(2);
 		}
 		// MENU UP
-		if (_buttons1->onPressAndAfter(1, 1000, 500)) {
-			buttonId = 10;
+		if (this->buttons1->onPressAndAfter(1, 1000, 500)) {
+			carduino->triggerEvent(10);
 		}
 		// MENU DOWN
-		if (_buttons1->onPressAndAfter(2, 1000, 500)) {
-			buttonId = 11;
+		if (this->buttons1->onPressAndAfter(2, 1000, 500)) {
+			carduino->triggerEvent(11);
 		}
 		// VOICE
-		if (_buttons1->onReleaseBefore(3, 500)) {
-			buttonId = 42;
+		if (this->buttons1->onReleaseBefore(3, 500)) {
+			carduino->triggerEvent(42);
 		}
 		// ENTER
-		if (_buttons1->onReleaseBefore(4, 500)) {
-			buttonId = 12;
+		if (this->buttons1->onReleaseBefore(4, 500)) {
+			carduino->triggerEvent(12);
 		}
 
-		_buttons2->update();
+		this->buttons2->update();
 
 		// VOL DOWN
-		if (_buttons2->onPressAndAfter(0, 500, 200)) {
-			buttonId = 20;
+		if (this->buttons2->onPressAndAfter(0, 500, 200)) {
+			carduino->triggerEvent(20);
 		}
 		// VOL UP
-		if (_buttons2->onPressAndAfter(1, 500, 200)) {
-			buttonId = 21;
+		if (this->buttons2->onPressAndAfter(1, 500, 200)) {
+			carduino->triggerEvent(21);
 		}
 		// PHONE
-		if (_buttons2->onReleaseBefore(2, 500)) {
-			buttonId = 30;
+		if (this->buttons2->onReleaseBefore(2, 500)) {
+			carduino->triggerEvent(30);
 		}
 		// BACK
-		if (_buttons2->onReleaseBefore(3, 500)) {
-			buttonId = 13;
-		}
-
-		if (buttonId > 0) {
-			_serialPacket->payload(buttonId);
-			_serialPacket->serialize(serial);
+		if (this->buttons2->onReleaseBefore(3, 500)) {
+			carduino->triggerEvent(13);
 		}
 	}
 private:
-	AnalogMultiButton *_buttons1;
-	AnalogMultiButton *_buttons2;
-	SerialDataPacket<uint8_t> *_serialPacket;
+	AnalogMultiButton * buttons1;
+	AnalogMultiButton * buttons2;
 };
 
 #endif /* _370Z_H_ */
