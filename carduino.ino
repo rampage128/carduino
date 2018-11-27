@@ -1,13 +1,12 @@
 #include "Arduino.h"
 #include "network.h"
 #include "carsystems.h"
-#include "can.h"
-#include "serial.h"
+#include "carduino.h"
 #include "370z.h"
 #include <everytime.h>
 
 Can can(&Serial, 2, 10);
-SerialReader serialReader(128, &can);
+Carduino carduino(&Serial, onCarduinoSerialEvent);
 
 NissanClimateControl nissanClimateControl;
 NissanSteeringControl nissanSteeringControl(A6, A7);
@@ -16,6 +15,7 @@ void setup() {
 	Serial.begin(115200);
 
 	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
+	carduino.addCan(&can);
 }
 
 void loop() {
@@ -45,7 +45,7 @@ void loop() {
 }
 
 void serialEvent() {
-	serialReader.read(Serial, onCarduinoSerialEvent);
+	carduino.readSerial();
 }
 
 void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {

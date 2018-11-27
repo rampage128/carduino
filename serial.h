@@ -2,103 +2,70 @@
 #define SERIAL_H_
 
 #include "serialpacket.h"
-#include "can.h"
 
 static SerialDataPacket<unsigned long> baudRatePacket(0x61, 0x02);
 
-class SerialReader {
+class SerialListener {
 public:
-	SerialReader(uint8_t size, Can * can) {
-		_serialBuffer = new BinaryBuffer(size);
-		this->can = can;
+	virtual ~SerialListener() {
+	}
+	virtual void onSerialPacket(uint8_t type, uint8_t id,
+			BinaryBuffer *payloadBuffer) = 0;
+};
+
+class SerialReader {
+private:
+	int packetStartIndex = -1;
+	BinaryBuffer *serialBuffer;
+	Stream * serial;
+public:
+	SerialReader(uint8_t size, Stream * serial) {
+		this->serialBuffer = new BinaryBuffer(size);
+		this->serial = serial;
 	}
 	~SerialReader() {
-		delete _serialBuffer;
+		delete this->serialBuffer;
 	}
-	void read(Stream &serial,
-			void (*eventCallback)(uint8_t id, BinaryBuffer *payloadBuffer)) {
+	void read(SerialListener * listener) {
 		int packetEndIndex = -1;
-		while (serial.available() && _serialBuffer->available() > 0) {
-			uint8_t data = serial.read();
-			_serialBuffer->write(data);
+		while (this->serial->available() && this->serialBuffer->available() > 0) {
+			uint8_t data = this->serial->read();
+			this->serialBuffer->write(data);
 
-			if (_packetStartIndex == -1 && data == 0x7b) {
-				_packetStartIndex = _serialBuffer->getPosition();
+			if (this->packetStartIndex == -1 && data == 0x7b) {
+				this->packetStartIndex = this->serialBuffer->getPosition();
 				continue;
 			}
 
 			if (data == 0x7d) {
-				packetEndIndex = _serialBuffer->getPosition();
+				packetEndIndex = this->serialBuffer->getPosition();
 
-				_serialBuffer->goTo(_packetStartIndex);
-				uint8_t type = _serialBuffer->readByte().data;
-				uint8_t id = _serialBuffer->readByte().data;
+				this->serialBuffer->goTo(this->packetStartIndex);
+				uint8_t type = this->serialBuffer->readByte().data;
+				uint8_t id = this->serialBuffer->readByte().data;
 
 				BinaryBuffer *payloadBuffer;
-				if (_serialBuffer->getPosition() < packetEndIndex) {
-					uint8_t payloadLength = _serialBuffer->readByte().data;
+				if (this->serialBuffer->getPosition() < packetEndIndex) {
+					uint8_t payloadLength = this->serialBuffer->readByte().data;
 					payloadBuffer = new BinaryBuffer(payloadLength);
 					if (payloadBuffer->available() > 0
-							&& packetEndIndex - _serialBuffer->getPosition()
-									> 0) {
-						payloadBuffer->write(_serialBuffer);
+							&& packetEndIndex
+									- this->serialBuffer->getPosition() > 0) {
+						payloadBuffer->write(this->serialBuffer);
 						payloadBuffer->goTo(0);
 					}
 				} else {
 					payloadBuffer = new BinaryBuffer(0);
 				}
 
-				processSerialPacket(type, id, payloadBuffer, eventCallback);
+				listener->onSerialPacket(type, id, payloadBuffer);
 
 				delete payloadBuffer;
 
-				_serialBuffer->goTo(0);
+				this->serialBuffer->goTo(0);
 				packetEndIndex = -1;
-				_packetStartIndex = -1;
+				this->packetStartIndex = -1;
 			}
-		}
-	}
-private:
-	Can * can;
-	int _packetStartIndex = -1;
-	BinaryBuffer *_serialBuffer;
-
-
-	void processSerialPacket(uint8_t type, uint8_t id,
-			BinaryBuffer *payloadBuffer,
-			void (*eventCallback)(uint8_t id, BinaryBuffer *payloadBuffer)) {
-		switch (type) {
-		case 0x61:
-			switch (id) {
-			case 0x0a: // start sniffer
-				if (this->can) {
-					this->can->startSniffer();
-				}
-				break;
-			case 0x0b: // stop sniffer
-				if (this->can) {
-					this->can->stopSniffer();
-				}
-				break;
-			case 0x72: { // set baud rate
-				BinaryData::LongResult result = payloadBuffer->readLong();
-				if (result.state == BinaryData::OK) {
-					baudRatePacket.payload(htonl(result.data));
-					baudRatePacket.serialize(&Serial);
-					Serial.flush();
-					Serial.end();
-					Serial.begin(result.data);
-					while (Serial.available()) {
-						Serial.read();
-					}
-				}
-				break;
-			}
-			}
-			break;
-		case 0x63:
-			eventCallback(id, payloadBuffer);
-			break;
 		}
 	}
 };
