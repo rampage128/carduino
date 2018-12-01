@@ -1,5 +1,5 @@
-#ifndef BINARYDATA_H
-#define BINARYDATA_H
+#ifndef BINARYDATA_H_
+#define BINARYDATA_H_
 
 #include <stdint.h>
 #include "network.h"
@@ -109,4 +109,4 @@ private:
 	uint8_t _position = 0;
 };
 
-#endif
+#endif /* BINARYDATA_H_ */

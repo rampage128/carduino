@@ -1,5 +1,5 @@
-#ifndef SERIALPACKET_H
-#define SERIALPACKET_H
+#ifndef SERIALPACKET_H_
+#define SERIALPACKET_H_
 
 #include "binarydata.h"
 
@@ -37,4 +37,4 @@ private:
 
 typedef SerialDataPacket<int[0]> SerialPacket;
 
-#endif
+#endif /* SERIALPACKET_H_ */

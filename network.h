@@ -1,5 +1,5 @@
-#ifndef NETWORK_H
-#define NETWORK_H
+#ifndef NETWORK_H_
+#define NETWORK_H_
 
 #define htons(x) ( ((x)<< 8 & 0xFF00) | \
                    ((x)>> 8 & 0x00FF) )
@@ -11,4 +11,4 @@
                    ((x)>>24 & 0x000000FFUL) )
 #define ntohl(x) htonl(x)
 
-#endif
+#endif /* NETWORK_H_ */
