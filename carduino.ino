@@ -1,4 +1,5 @@
 #include "Arduino.h"
+#include "timer.h"
 #include "network.h"
 #include "carsystems.h"
 #include "power.h"
@@ -12,6 +13,8 @@ Carduino carduino(&Serial, onCarduinoSerialEvent);
 
 NissanClimateControl nissanClimateControl;
 NissanSteeringControl nissanSteeringControl(A6, A7);
+
+Timer sleepTimer;
 
 bool isAccOn = false;
 
@@ -28,6 +31,8 @@ void loop() {
 	powerManager.sleep<2, CHANGE>(onSleep, onWakeUp);
 
 	can.beginTransaction();
+	can.updateFromCan<PowerState>(0x60D, powerState, updatePowerState);
+	can.updateFromCan<Doors>(0x60D, doors, updateDoors);
 	can.updateFromCan<DriveTrain>(0x421, driveTrain, updateDriveTrain);
 	can.updateFromCan<ClimateControl>(0x54A, climateControl,
 			updateClimateControl);
@@ -61,11 +66,26 @@ void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
 }
 
 bool onSleep() {
-	return false; // TODO return true if we should go to sleep
+	return !powerState->payload()->isAccessoryOn
+			&& (doors->payload()->isFrontLeftOpen
+					|| sleepTimer.check(1000UL * 60 * 30));
 }
 
 void onWakeUp() {
-	// Maybe we want to do some stuff after waking up
+	sleepTimer.reset();
+}
+
+void updatePowerState(long unsigned int id, unsigned char len,
+		unsigned char data[8], PowerState * powerState) {
+	powerState->isAccessoryOn = (data[8] & B00000010) == B00000010;
+	powerState->isIgnitionOn = (data[8] & B00000100) == B00000100;
+}
+
+void updateDoors(long unsigned int id, unsigned char len, unsigned char data[8],
+		Doors * doors) {
+	doors->isFrontLeftOpen = (data[0] & B00001000) == B00001000;
+	doors->isFrontRightOpen = (data[0] & B00010000) == B00010000;
+	doors->isTrunkOpen = (data[0] & B10000000) == B10000000;
 }
 
 void updateClimateControl(long unsigned int id, unsigned char len,

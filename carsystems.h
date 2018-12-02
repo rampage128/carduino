@@ -28,4 +28,24 @@ union DriveTrain {
 SerialDataPacket<DriveTrain>* driveTrain = new SerialDataPacket<DriveTrain>(
 		0x73, 0x67);
 
+union PowerState {
+	unsigned char data[1] = { 0x00 };
+	BitFieldMember<0, 1> isAccessoryOn;
+	BitFieldMember<1, 1> isIgnitionOn;
+};
+SerialDataPacket<PowerState>* powerState = new SerialDataPacket<PowerState>(
+		0x73, 0x70);
+
+union Doors {
+	unsigned char data[1] = { 0x00 };
+	BitFieldMember<0, 1> isFrontLeftOpen;
+	BitFieldMember<1, 1> isFrontRightOpen;
+	BitFieldMember<2, 1> isRearLeftOpen;
+	BitFieldMember<3, 1> isRearRightOpen;
+	BitFieldMember<4, 1> isTrunkOpen;
+	BitFieldMember<5, 1> isHoodOpen;
+};
+SerialDataPacket<Doors>* doors = new SerialDataPacket<Doors>(
+		0x73, 0x64);
+
 #endif /* CARSYSTEMS_H_ */
