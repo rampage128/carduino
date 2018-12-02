@@ -1,24 +1,32 @@
 #include "Arduino.h"
 #include "network.h"
 #include "carsystems.h"
+#include "power.h"
 #include "carduino.h"
 #include "370z.h"
 #include <everytime.h>
 
 Can can(&Serial, 2, 10);
+PowerManager powerManager(&Serial);
 Carduino carduino(&Serial, onCarduinoSerialEvent);
 
 NissanClimateControl nissanClimateControl;
 NissanSteeringControl nissanSteeringControl(A6, A7);
 
+bool isAccOn = false;
+
 void setup() {
 	Serial.begin(115200);
 
+	powerManager.setup();
 	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
 	carduino.addCan(&can);
+	carduino.addPowerManager(&powerManager);
 }
 
 void loop() {
+	powerManager.sleep<2, CHANGE>(onSleep, onWakeUp);
+
 	can.beginTransaction();
 	can.updateFromCan<DriveTrain>(0x421, driveTrain, updateDriveTrain);
 	can.updateFromCan<ClimateControl>(0x54A, climateControl,
@@ -50,6 +58,14 @@ void serialEvent() {
 
 void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
 	nissanClimateControl.push(eventId, payloadBuffer);
+}
+
+bool onSleep() {
+	return false; // TODO return true if we should go to sleep
+}
+
+void onWakeUp() {
+	// Maybe we want to do some stuff after waking up
 }
 
 void updateClimateControl(long unsigned int id, unsigned char len,

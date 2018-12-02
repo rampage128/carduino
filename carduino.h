@@ -3,6 +3,7 @@
 
 #include "serial.h"
 #include "can.h"
+#include "power.h"
 
 union CarduinoEvent {
 	unsigned char data[1] = { 0x00 };
@@ -15,6 +16,7 @@ private:
 	SerialReader * serialReader;
 	Stream * serial;
 	Can * can = NULL;
+	PowerManager * powerManager = NULL;
 	void (*serialEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer) = NULL;
 public:
 	Carduino(Stream * serial,
@@ -36,6 +38,9 @@ public:
 	}
 	void addCan(Can * can) {
 		this->can = can;
+	}
+	void addPowerManager(PowerManager * powerManager) {
+		this->powerManager = powerManager;
 	}
 	virtual void onSerialPacket(uint8_t type, uint8_t id,
 			BinaryBuffer *payloadBuffer) {
