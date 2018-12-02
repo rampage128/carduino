@@ -7,6 +7,8 @@
 #include "370z.h"
 #include <everytime.h>
 
+#define UNUSED(x) (void)(x)
+
 Can can(&Serial, 2, 10);
 PowerManager powerManager(&Serial);
 Carduino carduino(&Serial, onCarduinoSerialEvent);
@@ -77,12 +79,18 @@ void onWakeUp() {
 
 void updatePowerState(long unsigned int id, unsigned char len,
 		unsigned char data[8], PowerState * powerState) {
+	UNUSED(id);
+	UNUSED(len);
+
 	powerState->isAccessoryOn = (data[8] & B00000010) == B00000010;
 	powerState->isIgnitionOn = (data[8] & B00000100) == B00000100;
 }
 
 void updateDoors(long unsigned int id, unsigned char len, unsigned char data[8],
 		Doors * doors) {
+	UNUSED(id);
+	UNUSED(len);
+
 	doors->isFrontLeftOpen = (data[0] & B00001000) == B00001000;
 	doors->isFrontRightOpen = (data[0] & B00010000) == B00010000;
 	doors->isTrunkOpen = (data[0] & B10000000) == B10000000;
@@ -90,6 +98,8 @@ void updateDoors(long unsigned int id, unsigned char len, unsigned char data[8],
 
 void updateClimateControl(long unsigned int id, unsigned char len,
 		unsigned char data[8], ClimateControl * climateControl) {
+	UNUSED(len);
+
 	switch (id) {
 	// AC AUTO AMP 1
 	case (0x54A):
@@ -151,6 +161,9 @@ void updateClimateControl(long unsigned int id, unsigned char len,
 
 void updateDriveTrain(long unsigned int id, unsigned char len,
 		unsigned char data[8], DriveTrain * driveTrain) {
+	UNUSED(id);
+	UNUSED(len);
+
 	uint8_t gear = data[0];
 
 	// gear is N (0) or R (-1)
