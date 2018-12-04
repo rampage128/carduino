@@ -107,6 +107,15 @@ public:
 		}
 	}
 
+	template <uint8_t BYTE_INDEX, uint8_t BIT_MASK, uint8_t COMPARE_VALUE>
+	static bool readFlag(uint8_t * data) {
+		return (data[BYTE_INDEX] & BIT_MASK) == COMPARE_VALUE;
+	}
+	template <uint8_t BYTE_INDEX, uint8_t BIT_MASK>
+	static inline bool readFlag(uint8_t * data) {
+		return Can::readFlag<BYTE_INDEX, BIT_MASK, BIT_MASK>(data);
+	}
+
 	void write(INT32U id, INT8U ext, INT8U len, INT8U *buf) {
 		this->can->sendMsgBuf(id, ext, len, buf);
 	}

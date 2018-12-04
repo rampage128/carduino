@@ -82,8 +82,8 @@ void updatePowerState(long unsigned int id, unsigned char len,
 	UNUSED(id);
 	UNUSED(len);
 
-	powerState->isAccessoryOn = (data[8] & B00000010) == B00000010;
-	powerState->isIgnitionOn = (data[8] & B00000100) == B00000100;
+	powerState->isAccessoryOn = Can::readFlag<1, B00000010>(data);
+	powerState->isIgnitionOn = Can::readFlag<1, B00000100>(data);
 }
 
 void updateDoors(long unsigned int id, unsigned char len, unsigned char data[8],
@@ -91,9 +91,9 @@ void updateDoors(long unsigned int id, unsigned char len, unsigned char data[8],
 	UNUSED(id);
 	UNUSED(len);
 
-	doors->isFrontLeftOpen = (data[0] & B00001000) == B00001000;
-	doors->isFrontRightOpen = (data[0] & B00010000) == B00010000;
-	doors->isTrunkOpen = (data[0] & B10000000) == B10000000;
+	doors->isFrontLeftOpen = Can::readFlag<0, B00001000>(data);
+	doors->isFrontRightOpen = Can::readFlag<0, B00010000>(data);
+	doors->isTrunkOpen = Can::readFlag<0, B10000000>(data);
 }
 
 void updateClimateControl(long unsigned int id, unsigned char len,
@@ -142,19 +142,18 @@ void updateClimateControl(long unsigned int id, unsigned char len,
 			break;
 		}
 
-		climateControl->isWindshieldHeating =
-				(data[3] & B10000000) == B10000000;
-		climateControl->isRecirculation = (data[3] & B00000011) == B00000001;
-		climateControl->isAuto = (data[1] & B00001110) == B00000110;
+		climateControl->isWindshieldHeating = Can::readFlag<3, B10000000>(data);
+		climateControl->isRecirculation =
+				Can::readFlag<3, B00000011, B00000001>(data);
+		climateControl->isAuto = Can::readFlag<1, B00001110, B00000110>(data);
 		break;
 		// AC AUTO AMP 3
 	case (0x54C):
-		climateControl->isAcOn = (data[2] & B10000000) == B10000000;
+		climateControl->isAcOn = Can::readFlag<2, B10000000>(data);
 		break;
 		// AC AUTO AMP 4
 	case (0x625):
-		climateControl->isRearWindowHeating =
-				(data[0] & B00000001) == B00000001;
+		climateControl->isRearWindowHeating = Can::readFlag<0, B00000001>(data);
 		break;
 	}
 }
@@ -175,5 +174,5 @@ void updateDriveTrain(long unsigned int id, unsigned char len,
 		driveTrain->gearNum = ((int8_t) gear - 120) / 8;
 	}
 
-	driveTrain->isSynchroRev = (data[1] & B01000000) == B01000000;
+	driveTrain->isSynchroRev = Can::readFlag<1, B01000000>(data);
 }
