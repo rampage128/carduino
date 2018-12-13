@@ -11,6 +11,11 @@ static SerialPacket statusInitError(0x65, 0x30);
 static SerialPacket canNotInitializedError(0x65, 0x31);
 static SerialPacket canTransactionError(0x65, 0x32);
 
+static SerialPacket canSendBufferFull(0x65, 0x33);
+static SerialPacket canSendTimeout(0x65, 0x34);
+
+static SerialPacket canControlError(0x65, 0x35);
+
 struct CanData {
 	union {
 		unsigned char data[4];
@@ -66,6 +71,9 @@ public:
 	}
 
 	void endTransaction() {
+		if (this->can->checkError() == CAN_CTRLERROR) {
+			canControlError.serialize(this->serial);
+		}
 		this->inTransaction = false;
 	}
 
@@ -117,7 +125,12 @@ public:
 	}
 
 	void write(INT32U id, INT8U ext, INT8U len, INT8U *buf) {
-		this->can->sendMsgBuf(id, ext, len, buf);
+		uint8_t result = this->can->sendMsgBuf(id, ext, len, buf);
+		if (result == CAN_GETTXBFTIMEOUT) {
+			canSendBufferFull.serialize(serial);
+		} else if (result == CAN_SENDMSGTIMEOUT) {
+			canSendTimeout.serialize(serial);
+		}
 	}
 private:
 	MCP_CAN * can;
