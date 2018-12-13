@@ -9,7 +9,7 @@
 
 #define UNUSED(x) (void)(x)
 
-Can can(&Serial, 2, 10);
+Can can(&Serial, 3, 10);
 PowerManager powerManager(&Serial);
 Carduino carduino(&Serial, onCarduinoSerialEvent);
 
@@ -21,12 +21,14 @@ Timer sleepTimer;
 bool isAccOn = false;
 
 void setup() {
+	delay(500);
 	Serial.begin(115200);
 
 	powerManager.setup();
-	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
 	carduino.addCan(&can);
 	carduino.addPowerManager(&powerManager);
+	delay(2000);
+	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
 }
 
 void loop() {
