@@ -37,20 +37,17 @@ public:
 			digitalWrite(5, LOW);
 
 			// Prepare sleep mode
-			sleep_enable()
-			;
+			sleep_enable();
 			noInterrupts();
 			attachInterrupt(interrupt, nothing, INTERRUPT_TYPE);
 			set_sleep_mode(SLEEP_MODE_PWR_DOWN);
 			interrupts();
 
 			// Send to sleep
-			sleep_cpu()
-			;
+			sleep_cpu();
 
 			// Continue after waking up
-			sleep_disable()
-			;
+			sleep_disable();
 			detachInterrupt(interrupt);
 			this->setup();
 			if (wakeCallback) {
