@@ -32,7 +32,7 @@ void setup() {
 }
 
 void loop() {
-	powerManager.sleep<2, CHANGE>(onSleep, onWakeUp);
+	powerManager.sleep<2, RISING>(onSleep, onWakeUp);
 
 	can.beginTransaction();
 	can.updateFromCan<PowerState>(0x60D, powerState, updatePowerState);
@@ -70,9 +70,17 @@ void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
 }
 
 bool onSleep() {
-	return !powerState->payload()->isAccessoryOn
+	bool shouldSleep = !powerState->payload()->isAccessoryOn
 			&& (doors->payload()->isFrontLeftOpen
 					|| sleepTimer.check(1000UL * 60 * 30));
+
+	if (shouldSleep) {
+		for (int i = 2; i < 13; i++) {
+			digitalWrite(i, 0);
+		}
+	}
+
+	return shouldSleep;
 }
 
 void onWakeUp() {
@@ -169,11 +177,11 @@ void updateDriveTrain(long unsigned int id, unsigned char len,
 
 	// gear is N (0) or R (-1)
 	if (gear < 0x80) {
-		driveTrain->gearNum = ((int8_t) gear / 8) - 3;
+		driveTrain->gearNum = (int8_t)((gear / 8) - 3);
 	}
 	// gear is 1-6
 	else {
-		driveTrain->gearNum = ((int8_t) gear - 120) / 8;
+		driveTrain->gearNum = (int8_t)((gear - 120) / 8);
 	}
 
 	driveTrain->isSynchroRev = Can::readFlag<1, B01000000>(data);
