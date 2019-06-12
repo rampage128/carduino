@@ -65,9 +65,6 @@ public:
 			if (this->isSniffing) {
 				this->sniff();
 			}
-			Serial.print("{");
-			Serial.write(this->currentCanPacketId);
-			Serial.println("}");
 		}
 	}
 
