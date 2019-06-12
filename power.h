@@ -118,7 +118,14 @@ public:
 
 			// Crude debouncing of sleep mode
 			if (this->debounceInterrupt(INTERRUPT_PIN, SIGNAL_TYPE)) {
+				// Re-enable all digital pins
+				for (int i = 0; i <= 13; i++) {
+					digitalWrite(i, LOW);
+					pinMode(i, OUTPUT);
+				}
+
 				this->setup();
+
 				if (wakeCallback) {
 					wakeCallback();
 				}

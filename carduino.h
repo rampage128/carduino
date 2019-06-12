@@ -11,16 +11,17 @@ union CarduinoEvent {
 };
 static SerialDataPacket<CarduinoEvent> carduinoEvent (0x73, 0x72);
 static SerialPacket startup(0x61, 0x01);
+static SerialPacket shutdown(0x61, 0x02);
 
 class Carduino: public SerialListener {
 private:
 	SerialReader * serialReader;
-	Stream * serial;
+	HardwareSerial * serial;
 	Can * can = NULL;
 	PowerManager * powerManager = NULL;
 	void (*serialEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer) = NULL;
 public:
-	Carduino(Stream * serial,
+	Carduino(HardwareSerial * serial,
 			void (*userEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer)) {
 		this->serialReader = new SerialReader(128, serial);
 		this->serialEvent = userEvent;
@@ -44,7 +45,14 @@ public:
 		this->powerManager = powerManager;
 	}
 	void begin() {
+		this->serial->begin(115200);
+		delay(1000);
 		startup.serialize(this->serial);
+	}
+	void end() {
+		shutdown.serialize(this->serial);
+		this->serial->flush();
+		this->serial->end();
 	}
 	virtual void onSerialPacket(uint8_t type, uint8_t id,
 			BinaryBuffer *payloadBuffer) {

@@ -23,16 +23,12 @@ Timer sleepTimer;
 bool wasDriverDoorOpened = false;
 
 void setup() {
-	delay(500);
-	Serial.begin(115200);
+	carduino.begin();
+
 	powerManager.setup();
 	carduino.addCan(&can);
 	carduino.addPowerManager(&powerManager);
-	delay(1000);
-
-	SPI.begin();
 	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
-	carduino.begin();
 	carduino.triggerEvent(1);
 }
 
@@ -85,6 +81,7 @@ bool onSleep() {
 		// Reset driver door status, otherwise sleep is triggered after wake up
 		wasDriverDoorOpened = false;
 		carduino.triggerEvent(2);
+		carduino.end();
 	}
 
 	return shouldSleep;
@@ -92,12 +89,8 @@ bool onSleep() {
 
 void onWakeUp() {
 	sleepTimer.reset();
-	Serial.begin(115200);
-	delay(1000);
-
-	SPI.begin();
-	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
 	carduino.begin();
+	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
 	carduino.triggerEvent(3);
 }
 
