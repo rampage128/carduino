@@ -116,44 +116,44 @@ public:
 
 		// SOURCE
 		if (this->buttons1->onReleaseBefore(0, 500)) {
-			carduino->triggerEvent(1);
+			carduino->triggerEvent(101);
 		} else if (buttons1->onPressAfter(0, 500)) {
-			carduino->triggerEvent(2);
+			carduino->triggerEvent(102);
 		}
 		// MENU UP
 		if (this->buttons1->onPressAndAfter(1, 1000, 500)) {
-			carduino->triggerEvent(10);
+			carduino->triggerEvent(103);
 		}
 		// MENU DOWN
 		if (this->buttons1->onPressAndAfter(2, 1000, 500)) {
-			carduino->triggerEvent(11);
+			carduino->triggerEvent(104);
 		}
 		// VOICE
 		if (this->buttons1->onReleaseBefore(3, 500)) {
-			carduino->triggerEvent(42);
+			carduino->triggerEvent(112);
 		}
 		// ENTER
 		if (this->buttons1->onReleaseBefore(4, 500)) {
-			carduino->triggerEvent(12);
+			carduino->triggerEvent(105);
 		}
 
 		this->buttons2->update();
 
 		// VOL DOWN
 		if (this->buttons2->onPressAndAfter(0, 500, 200)) {
-			carduino->triggerEvent(20);
+			carduino->triggerEvent(110);
 		}
 		// VOL UP
 		if (this->buttons2->onPressAndAfter(1, 500, 200)) {
-			carduino->triggerEvent(21);
+			carduino->triggerEvent(111);
 		}
 		// PHONE
 		if (this->buttons2->onReleaseBefore(2, 500)) {
-			carduino->triggerEvent(30);
+			carduino->triggerEvent(113);
 		}
 		// BACK
 		if (this->buttons2->onReleaseBefore(3, 500)) {
-			carduino->triggerEvent(13);
+			carduino->triggerEvent(106);
 		}
 	}
 private:

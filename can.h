@@ -5,8 +5,7 @@
 #include "bitfield.h"
 #include "serialpacket.h"
 
-static SerialPacket statusInitSuccess(0x61, 0x30);
-static SerialPacket statusInitError(0x65, 0x30);
+static SerialPacket canInitError(0x65, 0x30);
 
 static SerialPacket canNotInitializedError(0x65, 0x31);
 static SerialPacket canTransactionError(0x65, 0x32);
@@ -41,9 +40,8 @@ public:
 			this->can->setMode(MCP_NORMAL);
 			pinMode(this->canInterruptPin, INPUT);
 			this->isInitialized = true;
-			statusInitSuccess.serialize(&Serial);
 		} else {
-			statusInitError.serialize(&Serial);
+			canInitError.serialize(&Serial);
 		}
 		return this->isInitialized;
 	}
@@ -67,12 +65,15 @@ public:
 			if (this->isSniffing) {
 				this->sniff();
 			}
+			Serial.print("{");
+			Serial.write(this->currentCanPacketId);
+			Serial.println("}");
 		}
 	}
 
 	void endTransaction() {
 		if (this->can->checkError() == CAN_CTRLERROR) {
-			canControlError.serialize(this->serial);
+			//canControlError.serialize(this->serial);
 		}
 		this->inTransaction = false;
 	}
@@ -89,6 +90,7 @@ public:
 	void updateFromCan(long unsigned int canId, SerialDataPacket<T> * packet,
 			void (*callback)(long unsigned int id, unsigned char len,
 					unsigned char data[8], T * carSystem)) {
+
 		if (!this->inTransaction) {
 			/*
 			 * Intentionally return silently.
@@ -127,9 +129,9 @@ public:
 	void write(INT32U id, INT8U ext, INT8U len, INT8U *buf) {
 		uint8_t result = this->can->sendMsgBuf(id, ext, len, buf);
 		if (result == CAN_GETTXBFTIMEOUT) {
-			canSendBufferFull.serialize(serial);
+			//canSendBufferFull.serialize(serial);
 		} else if (result == CAN_SENDMSGTIMEOUT) {
-			canSendTimeout.serialize(serial);
+			//canSendTimeout.serialize(serial);
 		}
 	}
 private:

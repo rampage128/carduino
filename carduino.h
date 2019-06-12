@@ -10,6 +10,7 @@ union CarduinoEvent {
 	BitFieldMember<0, 8> eventNum;
 };
 static SerialDataPacket<CarduinoEvent> carduinoEvent (0x73, 0x72);
+static SerialPacket startup(0x61, 0x01);
 
 class Carduino: public SerialListener {
 private:
@@ -41,6 +42,9 @@ public:
 	}
 	void addPowerManager(PowerManager * powerManager) {
 		this->powerManager = powerManager;
+	}
+	void begin() {
+		startup.serialize(this->serial);
 	}
 	virtual void onSerialPacket(uint8_t type, uint8_t id,
 			BinaryBuffer *payloadBuffer) {

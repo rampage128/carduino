@@ -8,31 +8,36 @@
 #include <everytime.h>
 
 #define UNUSED(x) (void)(x)
+#define ONE_SECOND 1000UL
+#define ONE_MINUTE ONE_SECOND * 60
 
-Can can(&Serial, 3, 10);
-PowerManager powerManager(&Serial);
+Can can(&Serial, 5, 6);
+PowerManager powerManager(&Serial, 3, 4);
 Carduino carduino(&Serial, onCarduinoSerialEvent);
 
 NissanClimateControl nissanClimateControl;
-NissanSteeringControl nissanSteeringControl(A6, A7);
+NissanSteeringControl nissanSteeringControl(A0, A1);
 
 Timer sleepTimer;
 
-bool isAccOn = false;
+bool wasDriverDoorOpened = false;
 
 void setup() {
 	delay(500);
 	Serial.begin(115200);
-
 	powerManager.setup();
 	carduino.addCan(&can);
 	carduino.addPowerManager(&powerManager);
-	delay(2000);
+	delay(1000);
+
+	SPI.begin();
 	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
+	carduino.begin();
+	carduino.triggerEvent(1);
 }
 
 void loop() {
-	powerManager.sleep<2, RISING>(onSleep, onWakeUp);
+	powerManager.sleep<2, RISING, HIGH>(onSleep, onWakeUp);
 
 	can.beginTransaction();
 	can.updateFromCan<PowerState>(0x60D, powerState, updatePowerState);
@@ -56,8 +61,8 @@ void loop() {
 
 	every(1000)
 	{
-		climateControl->serialize(&Serial);
-		driveTrain->serialize(&Serial);
+		//climateControl->serialize(&Serial);
+		//driveTrain->serialize(&Serial);
 	}
 }
 
@@ -70,14 +75,16 @@ void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
 }
 
 bool onSleep() {
+	// should go to sleep, when ACC is off and driver door is opened
+	// Or allow operation without ACC in the closed vehicle for 30 minutes
 	bool shouldSleep = !powerState->payload()->isAccessoryOn
-			&& (doors->payload()->isFrontLeftOpen
-					|| sleepTimer.check(1000UL * 60 * 30));
+			&& (wasDriverDoorOpened
+					|| sleepTimer.check(ONE_MINUTE * 30));
 
 	if (shouldSleep) {
-		for (int i = 2; i < 13; i++) {
-			digitalWrite(i, 0);
-		}
+		// Reset driver door status, otherwise sleep is triggered after wake up
+		wasDriverDoorOpened = false;
+		carduino.triggerEvent(2);
 	}
 
 	return shouldSleep;
@@ -85,6 +92,13 @@ bool onSleep() {
 
 void onWakeUp() {
 	sleepTimer.reset();
+	Serial.begin(115200);
+	delay(1000);
+
+	SPI.begin();
+	can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
+	carduino.begin();
+	carduino.triggerEvent(3);
 }
 
 void updatePowerState(long unsigned int id, unsigned char len,
@@ -101,7 +115,15 @@ void updateDoors(long unsigned int id, unsigned char len, unsigned char data[8],
 	UNUSED(id);
 	UNUSED(len);
 
-	doors->isFrontLeftOpen = Can::readFlag<0, B00001000>(data);
+	// Detect if driver door was physically opened (used as sleep condition)
+	bool isFrontLeftOpen = Can::readFlag<0, B00001000>(data);
+	if (isFrontLeftOpen && !doors->isFrontLeftOpen) {
+		wasDriverDoorOpened = true;
+	} else if (!isFrontLeftOpen) {
+		wasDriverDoorOpened = false;
+	}
+
+	doors->isFrontLeftOpen = isFrontLeftOpen;
 	doors->isFrontRightOpen = Can::readFlag<0, B00010000>(data);
 	doors->isTrunkOpen = Can::readFlag<0, B10000000>(data);
 }
