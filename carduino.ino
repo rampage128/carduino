@@ -57,8 +57,8 @@ void loop() {
 
 	every(1000)
 	{
-		//climateControl->serialize(&Serial);
-		//driveTrain->serialize(&Serial);
+		climateControl->serialize(&Serial);
+		driveTrain->serialize(&Serial);
 	}
 }
 
