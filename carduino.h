@@ -11,7 +11,8 @@ union CarduinoEvent {
 };
 static SerialDataPacket<CarduinoEvent> carduinoEvent (0x73, 0x72);
 static SerialPacket startup(0x61, 0x01);
-static SerialPacket shutdown(0x61, 0x02);
+static SerialDataPacket<unsigned long> baudRatePacket(0x61, 0x02);
+static SerialPacket shutdown(0x61, 0x03);
 
 class Carduino: public SerialListener {
 private:

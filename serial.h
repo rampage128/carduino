@@ -3,8 +3,6 @@
 
 #include "serialpacket.h"
 
-static SerialDataPacket<unsigned long> baudRatePacket(0x61, 0x02);
-
 class SerialListener {
 public:
 	virtual ~SerialListener() {
