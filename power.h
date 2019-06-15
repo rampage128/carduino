@@ -5,10 +5,13 @@
 #include <avr/sleep.h>
 #include <SPI.h>
 
+static volatile uint8_t interruptPinStateOnWake = 0;
+
 template<uint8_t INTERRUPT_PIN>
 static void wake(void) {
 	sleep_disable();
 	detachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN));
+	interruptPinStateOnWake = digitalRead(INTERRUPT_PIN);
 }
 
 static bool forceSleep() {
@@ -22,16 +25,19 @@ private:
 	Stream * serial;
 	uint8_t chargerPin;
 	uint8_t peripheralPin;
-	bool debounceInterrupt(uint8_t interruptPin, uint8_t signalType) {
-		delay(100);
+	bool confirmInterrupt(uint8_t interruptPin, uint8_t desiredPinState, uint32_t duration) {
+		uint32_t sampleDelay = duration / 10;
+
+		// Count samples with matching pin state
 		uint8_t counter = 0;
 		for (int i = 0; i < 10; i++) {
-			if (digitalRead(interruptPin) == signalType) {
+			delay(sampleDelay);
+			if (digitalRead(interruptPin) == desiredPinState) {
 				counter++;
 			}
-			delay(100);
 		}
 
+		// Confirm interrupt if at least 3 samples match the desired pin state
 		return counter >= 3;
 	}
 public:
@@ -53,7 +59,7 @@ public:
 	void togglePeripherals(bool state) {
 		digitalWrite(this->peripheralPin, state);
 	}
-	template<uint8_t INTERRUPT_PIN, uint8_t INTERRUPT_TYPE, uint8_t SIGNAL_TYPE>
+	template<uint8_t INTERRUPT_PIN, uint8_t INTERRUPT_TYPE, uint32_t INTERRUPT_DURATION>
 	void sleep(bool (*sleepCallback)(void), void (*wakeCallback)(void)) {
 		// Disable external peripherals
 		if (!sleepCallback) {
@@ -74,7 +80,7 @@ public:
 				digitalWrite(13, LOW);
 				delay(100);
 				digitalWrite(13, HIGH);
-				delay(100);
+				delay(50);
 			}
 
 			// get interrupt handle
@@ -84,11 +90,20 @@ public:
 			this->toggleCharger(false);
 			this->togglePeripherals(false);
 
-			// Disable all digital pins
-			for (int i = 0; i <= 13; i++) {
-				digitalWrite(i, LOW);
-				pinMode(i, INPUT);
-			}
+			// Store pins state and disable all pins (input, low)
+			byte ddrbState 	= DDRB;
+			byte portbState = PORTB;
+			byte ddrcState 	= DDRC;
+			byte portcState = PORTC;
+			byte ddrdState 	= DDRD;
+			byte portdState = PORTD;
+
+			DDRB 	= B00000000;
+			PORTB 	= B00000000;
+			DDRC 	= B00000000;
+			PORTC 	= B00000000;
+			DDRD 	= B00000000;
+			PORTD 	= B00000000;
 
 			// Remember ADC state and turn it off
 			byte adcsraState = ADCSRA;
@@ -117,14 +132,25 @@ public:
 
 			// Continue after waking up
 
-			// Crude debouncing of sleep mode
-			if (this->debounceInterrupt(INTERRUPT_PIN, SIGNAL_TYPE)) {
-				// Re-enable all digital pins
-				for (int i = 0; i <= 13; i++) {
-					digitalWrite(i, LOW);
-					pinMode(i, OUTPUT);
-				}
+			uint8_t desiredPinState = LOW;
+			if (INTERRUPT_TYPE == RISING) {
+				desiredPinState = HIGH;
+			}
+			else if (INTERRUPT_TYPE == CHANGE) {
+				desiredPinState = interruptPinStateOnWake;
+			}
 
+			// Resume if interrupt can be confirmed (signal is longer than specified duration)
+			if (this->confirmInterrupt(INTERRUPT_PIN, desiredPinState, INTERRUPT_DURATION)) {
+				// Restore pin states before sleep
+				DDRB 	= ddrbState;
+				PORTB 	= portbState;
+				DDRC 	= ddrcState;
+				PORTC 	= portcState;
+				DDRD 	= ddrdState;
+				PORTD 	= portdState;
+
+				// Restore ADC state
 				ADCSRA = adcsraState;
 
 				this->setup();
@@ -134,7 +160,7 @@ public:
 				}
 			}
 			else {
-				this->sleep<INTERRUPT_PIN, INTERRUPT_TYPE, SIGNAL_TYPE>(forceSleep, wakeCallback);
+				this->sleep<INTERRUPT_PIN, INTERRUPT_TYPE, INTERRUPT_DURATION>(forceSleep, wakeCallback);
 			}
 		}
 	}

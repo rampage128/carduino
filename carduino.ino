@@ -33,7 +33,7 @@ void setup() {
 }
 
 void loop() {
-	powerManager.sleep<2, RISING, HIGH>(onSleep, onWakeUp);
+	powerManager.sleep<2, RISING, 500>(onSleep, onWakeUp);
 
 	can.beginTransaction();
 	can.updateFromCan<PowerState>(0x60D, powerState, updatePowerState);
