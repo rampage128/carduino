@@ -90,7 +90,8 @@ public:
 				pinMode(i, INPUT);
 			}
 
-			// disable ADC
+			// Remember ADC state and turn it off
+			byte adcsraState = ADCSRA;
 			ADCSRA = 0;
 
 			// Prepare sleep mode
@@ -123,6 +124,8 @@ public:
 					digitalWrite(i, LOW);
 					pinMode(i, OUTPUT);
 				}
+
+				ADCSRA = adcsraState;
 
 				this->setup();
 
