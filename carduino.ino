@@ -71,11 +71,17 @@ void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
 }
 
 bool onSleep() {
-	// should go to sleep, when ACC is off and driver door is opened
-	// Or allow operation without ACC in the closed vehicle for 30 minutes
-	bool shouldSleep = !powerState->payload()->isAccessoryOn
-			&& (wasDriverDoorOpened
-					|| sleepTimer.check(ONE_MINUTE * 30));
+	bool shouldSleep = false;
+
+	// Check sleep conditions
+	if (powerState->payload()->isAccessoryOn) {
+		// Reset timer when ACC is on to prevent premature sleep
+		sleepTimer.reset();
+	} else {
+		// should go to sleep, when ACC is off and driver door is opened
+		// Or allow operation without ACC in the closed vehicle for 30 minutes
+		shouldSleep = wasDriverDoorOpened || sleepTimer.check(ONE_MINUTE * 30);
+	}
 
 	if (shouldSleep) {
 		// Reset driver door status, otherwise sleep is triggered after wake up
