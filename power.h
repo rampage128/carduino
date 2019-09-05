@@ -173,6 +173,9 @@ public:
 				// Restore ADC state
 				ADCSRA = adcsraState;
 
+				// Sanity delay
+				delay(500);
+
 				this->setup();
 
 				if (wakeCallback) {
