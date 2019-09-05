@@ -14,6 +14,8 @@ static void wake(void) {
 	interruptPinStateOnWake = digitalRead(INTERRUPT_PIN);
 }
 
+static void noop() {}
+
 static bool forceSleep() {
 	return true;
 }
@@ -59,13 +61,15 @@ public:
 	void togglePeripherals(bool state) {
 		digitalWrite(this->peripheralPin, state);
 	}
-	template<uint8_t INTERRUPT_PIN, uint8_t INTERRUPT_TYPE, uint32_t INTERRUPT_DURATION>
-	void sleep(bool (*sleepCallback)(void), void (*wakeCallback)(void)) {
-		// Disable external peripherals
+	template<uint8_t INTERRUPT_PIN, uint8_t INTERRUPT_TYPE, uint32_t INTERRUPT_DURATION, uint32_t CHARGE_DURATION>
+	void update(bool (*sleepCallback)(void), void (*wakeCallback)(void), void (*loopCallback)(void)) {
+		loopCallback();
+
 		if (!sleepCallback) {
 			noSleepCallbackError.serialize(&Serial);
 			return;
 		}
+
 		if (sleepCallback()) {
 			// Flush serial and terminate connection
 			Serial.flush();
@@ -87,8 +91,24 @@ public:
 			uint8_t interrupt = digitalPinToInterrupt(INTERRUPT_PIN);
 
 			// disable built in power modules
-			this->toggleCharger(false);
 			this->togglePeripherals(false);
+
+			// If specified by user charge tablet for a while
+			if (CHARGE_DURATION > 0) {
+				// Make sure charger is on!
+				this->toggleCharger(true);
+
+				uint8_t chargeInterrupt = digitalRead(INTERRUPT_PIN);
+				uint32_t chargeTime = millis();
+				while (chargeTime >= millis() - CHARGE_DURATION
+						&& !this->confirmInterrupt(INTERRUPT_PIN,
+								!chargeInterrupt, INTERRUPT_DURATION)) {
+					// wait for charge time to end or interrupt pin to change
+				}
+			}
+
+			// disable charger
+			this->toggleCharger(false);
 
 			// Store pins state and disable all pins (input, low)
 			byte ddrbState 	= DDRB;
@@ -160,7 +180,7 @@ public:
 				}
 			}
 			else {
-				this->sleep<INTERRUPT_PIN, INTERRUPT_TYPE, INTERRUPT_DURATION>(forceSleep, wakeCallback);
+				this->update<INTERRUPT_PIN, INTERRUPT_TYPE, INTERRUPT_DURATION, CHARGE_DURATION>(forceSleep, wakeCallback, noop);
 			}
 		}
 	}

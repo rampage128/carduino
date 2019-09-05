@@ -33,8 +33,18 @@ void setup() {
 }
 
 void loop() {
-	powerManager.sleep<2, RISING, 500>(onSleep, onWakeUp);
+	powerManager.update<2, RISING, ONE_SECOND / 2, ONE_MINUTE * 15>(onSleep, onWakeUp, onLoop);
+}
 
+void serialEvent() {
+	carduino.readSerial();
+}
+
+void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
+	nissanClimateControl.push(eventId, payloadBuffer);
+}
+
+void onLoop() {
 	can.beginTransaction();
 	can.updateFromCan<PowerState>(0x60D, powerState, updatePowerState);
 	can.updateFromCan<Doors>(0x60D, doors, updateDoors);
@@ -60,14 +70,6 @@ void loop() {
 		climateControl->serialize(&Serial);
 		driveTrain->serialize(&Serial);
 	}
-}
-
-void serialEvent() {
-	carduino.readSerial();
-}
-
-void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
-	nissanClimateControl.push(eventId, payloadBuffer);
 }
 
 bool onSleep() {
