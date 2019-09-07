@@ -48,12 +48,12 @@ public:
 
 	void beginTransaction() {
 		if (!this->isInitialized) {
-			canNotInitializedError.serialize(this->serial);
+			canNotInitializedError.serialize(this->serial, 1000);
 			return;
 		}
 
 		if (this->inTransaction) {
-			canTransactionError.serialize(this->serial);
+			canTransactionError.serialize(this->serial, 1000);
 			return;
 		}
 
@@ -70,7 +70,7 @@ public:
 
 	void endTransaction() {
 		if (this->can->checkError() == CAN_CTRLERROR) {
-			//canControlError.serialize(this->serial);
+			canControlError.serialize(this->serial, 1000);
 		}
 		this->inTransaction = false;
 	}
@@ -124,11 +124,16 @@ public:
 	}
 
 	void write(INT32U id, INT8U ext, INT8U len, INT8U *buf) {
+		if (!this->isInitialized) {
+			canNotInitializedError.serialize(this->serial, 1000);
+			return;
+		}
+
 		uint8_t result = this->can->sendMsgBuf(id, ext, len, buf);
 		if (result == CAN_GETTXBFTIMEOUT) {
-			//canSendBufferFull.serialize(serial);
+			canSendBufferFull.serialize(serial, 1000);
 		} else if (result == CAN_SENDMSGTIMEOUT) {
-			//canSendTimeout.serialize(serial);
+			canSendTimeout.serialize(serial, 1000);
 		}
 	}
 private:

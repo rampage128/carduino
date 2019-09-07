@@ -192,7 +192,7 @@ public:
 		loopCallback();
 
 		if (!sleepCallback) {
-			noSleepCallbackError.serialize(&Serial);
+			noSleepCallbackError.serialize(&Serial, 1000);
 			return;
 		}
 
