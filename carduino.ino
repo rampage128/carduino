@@ -45,30 +45,32 @@ void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
 }
 
 void onLoop() {
-	can.beginTransaction();
-	can.updateFromCan<PowerState>(0x60D, powerState, updatePowerState);
-	can.updateFromCan<Doors>(0x60D, doors, updateDoors);
-	can.updateFromCan<DriveTrain>(0x421, driveTrain, updateDriveTrain);
-	can.updateFromCan<ClimateControl>(0x54A, climateControl,
-			updateClimateControl);
-	can.updateFromCan<ClimateControl>(0x54B, climateControl,
-			updateClimateControl);
-	can.updateFromCan<ClimateControl>(0x54C, climateControl,
-			updateClimateControl);
-	can.updateFromCan<ClimateControl>(0x625, climateControl,
-			updateClimateControl);
-	can.endTransaction();
+	if (carduino.isConnected()) {
+		can.beginTransaction();
+		can.updateFromCan<PowerState>(0x60D, powerState, updatePowerState);
+		can.updateFromCan<Doors>(0x60D, doors, updateDoors);
+		can.updateFromCan<DriveTrain>(0x421, driveTrain, updateDriveTrain);
+		can.updateFromCan<ClimateControl>(0x54A, climateControl,
+				updateClimateControl);
+		can.updateFromCan<ClimateControl>(0x54B, climateControl,
+				updateClimateControl);
+		can.updateFromCan<ClimateControl>(0x54C, climateControl,
+				updateClimateControl);
+		can.updateFromCan<ClimateControl>(0x625, climateControl,
+				updateClimateControl);
+		can.endTransaction();
 
-	nissanSteeringControl.check(&carduino);
+		nissanSteeringControl.check(&carduino);
 
-	every(250) {
-		nissanClimateControl.broadcast(can);
-	}
+		every(250) {
+			nissanClimateControl.broadcast(can);
+		}
 
-	every(1000)
-	{
-		climateControl->serialize(&Serial);
-		driveTrain->serialize(&Serial);
+		every(1000)
+		{
+			climateControl->serialize(&Serial);
+			driveTrain->serialize(&Serial);
+		}
 	}
 }
 

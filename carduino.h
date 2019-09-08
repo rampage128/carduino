@@ -5,6 +5,16 @@
 #include "can.h"
 #include "power.h"
 
+static SerialPacket baudRateReadError(0x65, 0x01);
+
+union CarduinoProtocolVersion {
+	unsigned char data[3] = { 0x01, 0x00, 0x00 };
+	BitFieldMember<0, 8> major;
+	BitFieldMember<8, 16> minor;
+	BitFieldMember<16, 24> revision;
+};
+static SerialDataPacket<CarduinoProtocolVersion> ping(0x61, 0x00);
+
 static SerialPacket startup(0x61, 0x01);
 static SerialDataPacket<unsigned long> baudRatePacket(0x61, 0x02);
 static SerialPacket shutdown(0x61, 0x03);
@@ -15,6 +25,7 @@ private:
 	HardwareSerial * serial;
 	Can * can = NULL;
 	PowerManager * powerManager = NULL;
+	bool isConnectedFlag = false;
 	void (*serialEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer) = NULL;
 public:
 	Carduino(HardwareSerial * serial,
@@ -26,6 +37,12 @@ public:
 	~Carduino() {
 		delete this->serialReader;
 		delete this->can;
+	}
+	bool isConnected() {
+		if (!this->isConnectedFlag) {
+			ping.serialize(this->serial, 500);
+		}
+		return this->isConnectedFlag;
 	}
 	void readSerial() {
 		this->serialReader->read(this);
@@ -43,12 +60,12 @@ public:
 	void begin() {
 		this->serial->begin(115200);
 		delay(1000);
-		startup.serialize(this->serial);
 	}
 	void end() {
 		shutdown.serialize(this->serial);
 		this->serial->flush();
 		this->serial->end();
+		this->isConnectedFlag = false;
 	}
 	virtual void onSerialPacket(uint8_t type, uint8_t id,
 			BinaryBuffer *payloadBuffer) {
@@ -56,6 +73,10 @@ public:
 		switch (type) {
 		case 0x61:
 			switch (id) {
+			case 0x00: // Connection request
+				this->isConnectedFlag = true;
+				startup.serialize(this->serial);
+				break;
 			case 0x0a: // start sniffer
 				if (this->can) {
 					this->can->startSniffer();
@@ -71,12 +92,11 @@ public:
 				if (result.state == BinaryData::OK) {
 					baudRatePacket.payload(htonl(result.data));
 					baudRatePacket.serialize(&Serial);
-					Serial.flush();
-					Serial.end();
-					Serial.begin(result.data);
-					while (Serial.available()) {
-						Serial.read();
-					}
+					this->serial->flush();
+					this->serial->end();
+					this->serial->begin(result.data);
+				} else {
+					baudRateReadError.serialize(this->serial);
 				}
 				break;
 			}
