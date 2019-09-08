@@ -40,7 +40,7 @@ BinaryData::ByteResult BinaryData::readByte(uint8_t index) {
 BinaryData::LongResult BinaryData::readLong(uint8_t index) {
 	struct LongResult result;
 
-	if (checkIndex(index + 4) == AccessStatus::INDEXOUTOFBOUNDS) {
+	if (checkIndex(index + 3) == AccessStatus::INDEXOUTOFBOUNDS) {
 		result.state = AccessStatus::INDEXOUTOFBOUNDS;
 		return result;
 	}
