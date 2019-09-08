@@ -5,11 +5,6 @@
 #include "can.h"
 #include "power.h"
 
-union CarduinoEvent {
-	unsigned char data[1] = { 0x00 };
-	BitFieldMember<0, 8> eventNum;
-};
-static SerialDataPacket<CarduinoEvent> carduinoEvent (0x73, 0x72);
 static SerialPacket startup(0x61, 0x01);
 static SerialDataPacket<unsigned long> baudRatePacket(0x61, 0x02);
 static SerialPacket shutdown(0x61, 0x03);
@@ -36,7 +31,7 @@ public:
 		this->serialReader->read(this);
 	}
 	void triggerEvent(uint8_t eventNum) {
-		carduinoEvent.payload()->eventNum = eventNum;
+		SerialPacket carduinoEvent(0x63, eventNum);
 		carduinoEvent.serialize(this->serial);
 	}
 	void addCan(Can * can) {
