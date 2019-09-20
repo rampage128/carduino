@@ -1,10 +1,11 @@
 ### Sloeber ###
 
-Release/*
+/Release/
 .settings/
 .cproject
 .project
 sloeber.ino.cpp
+spec.d
 
 ### Visual Studio ###
 
