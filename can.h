@@ -16,158 +16,158 @@ static SerialPacket canSendTimeout(0x65, 0x34);
 static SerialPacket canControlError(0x65, 0x35);
 
 struct CanData {
-	union {
-		unsigned char data[4];
-		BitFieldMember<0, 32> canId;
-	} header;
-	uint8_t data[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    union {
+        unsigned char data[4];
+        BitFieldMember<0, 32> canId;
+    } header;
+    uint8_t data[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 };
 static SerialDataPacket<CanData> snifferPacket(0x62, 0x6d);
 
 class Can {
 public:
-	Can(Stream * serial, uint8_t canInterruptPin, uint8_t canCsPin) {
-		this->serial = serial;
-		this->can = new MCP_CAN(canCsPin);
-		this->canInterruptPin = canInterruptPin;
-	}
-	~Can() {
-		delete this->can;
-	}
-	boolean setup(uint8_t mode, uint8_t speed, uint8_t clock) {
-		uint8_t canStatus = this->can->begin(mode, speed, clock);
-		if (canStatus == CAN_OK) {
-			this->can->setMode(MCP_NORMAL);
-			pinMode(this->canInterruptPin, INPUT);
-			this->isInitialized = true;
-		} else {
-			canInitError.serialize(&Serial);
-		}
-		return this->isInitialized;
-	}
+    Can(Stream * serial, uint8_t canInterruptPin, uint8_t canCsPin) {
+        this->serial = serial;
+        this->can = new MCP_CAN(canCsPin);
+        this->canInterruptPin = canInterruptPin;
+    }
+    ~Can() {
+        delete this->can;
+    }
+    boolean setup(uint8_t mode, uint8_t speed, uint8_t clock) {
+        uint8_t canStatus = this->can->begin(mode, speed, clock);
+        if (canStatus == CAN_OK) {
+            this->can->setMode(MCP_NORMAL);
+            pinMode(this->canInterruptPin, INPUT);
+            this->isInitialized = true;
+        } else {
+            canInitError.serialize(&Serial);
+        }
+        return this->isInitialized;
+    }
 
-	void beginTransaction() {
-		if (!this->isInitialized) {
-			canNotInitializedError.serialize(this->serial, 1000);
-			return;
-		}
+    void beginTransaction() {
+        if (!this->isInitialized) {
+            canNotInitializedError.serialize(this->serial, 1000);
+            return;
+        }
 
-		if (this->inTransaction) {
-			canTransactionError.serialize(this->serial, 1000);
-			return;
-		}
+        if (this->inTransaction) {
+            canTransactionError.serialize(this->serial, 1000);
+            return;
+        }
 
-		if (!digitalRead(canInterruptPin)) {
-			this->inTransaction = true;
+        if (!digitalRead(canInterruptPin)) {
+            this->inTransaction = true;
 
-			this->can->readMsgBuf(&this->currentCanPacketId,
-					&this->currentCanPacketLength, this->currentCanPacketData);
-			if (this->isSniffing) {
-				this->sniff();
-			}
-		}
-	}
+            this->can->readMsgBuf(&this->currentCanPacketId,
+                    &this->currentCanPacketLength, this->currentCanPacketData);
+            if (this->isSniffing) {
+                this->sniff();
+            }
+        }
+    }
 
-	void endTransaction() {
-		/*
-		 * Happens almost every second, thus popping up errors constantly.
-		 * TODO: Maybe reintroduce this as a warning (no notification)?
-		 * if (this->can->checkError() == CAN_CTRLERROR) {
-		 * 	canControlError.serialize(this->serial, 1000);
-		 * }
-		 */
-		this->inTransaction = false;
-	}
+    void endTransaction() {
+        /*
+         * Happens almost every second, thus popping up errors constantly.
+         * TODO: Maybe reintroduce this as a warning (no notification)?
+         * if (this->can->checkError() == CAN_CTRLERROR) {
+         * 	canControlError.serialize(this->serial, 1000);
+         * }
+         */
+        this->inTransaction = false;
+    }
 
-	void startSniffer() {
-		this->isSniffing = true;
-	}
+    void startSniffer() {
+        this->isSniffing = true;
+    }
 
-	void stopSniffer() {
-		this->isSniffing = false;
-	}
+    void stopSniffer() {
+        this->isSniffing = false;
+    }
 
-	template<typename T>
-	void updateFromCan(long unsigned int canId, SerialDataPacket<T> * packet,
-			void (*callback)(long unsigned int id, unsigned char len,
-					unsigned char data[8], T * carSystem)) {
+    template<typename T>
+    void updateFromCan(long unsigned int canId, SerialDataPacket<T> * packet,
+            void (*callback)(long unsigned int id, unsigned char len,
+                    unsigned char data[8], T * carSystem)) {
 
-		if (!this->inTransaction) {
-			/*
-			 * Intentionally return silently.
-			 * beginTransaction only starts a transaction if a can-packet was
-			 * received.
-			 */
-			return;
-		}
+        if (!this->inTransaction) {
+            /*
+             * Intentionally return silently.
+             * beginTransaction only starts a transaction if a can-packet was
+             * received.
+             */
+            return;
+        }
 
-		if (canId == this->currentCanPacketId) {
-			int dataLength = sizeof(T);
-			T * carSystem = new T();
-			memcpy(carSystem, packet->payload(), dataLength);
+        if (canId == this->currentCanPacketId) {
+            int dataLength = sizeof(T);
+            T * carSystem = new T();
+            memcpy(carSystem, packet->payload(), dataLength);
 
-			callback(this->currentCanPacketId, this->currentCanPacketLength,
-					this->currentCanPacketData, carSystem);
+            callback(this->currentCanPacketId, this->currentCanPacketLength,
+                    this->currentCanPacketData, carSystem);
 
-			if (memcmp(carSystem, packet->payload(), dataLength) != 0) {
-				memcpy(packet->payload(), carSystem, dataLength);
-				packet->serialize(this->serial);
-			}
+            if (memcmp(carSystem, packet->payload(), dataLength) != 0) {
+                memcpy(packet->payload(), carSystem, dataLength);
+                packet->serialize(this->serial);
+            }
 
-			delete carSystem;
-		}
-	}
+            delete carSystem;
+        }
+    }
 
-	template <uint8_t BYTE_INDEX, uint8_t BIT_MASK, uint8_t COMPARE_VALUE>
-	static bool readFlag(uint8_t * data) {
-		return (data[BYTE_INDEX] & BIT_MASK) == COMPARE_VALUE;
-	}
-	template <uint8_t BYTE_INDEX, uint8_t BIT_MASK>
-	static inline bool readFlag(uint8_t * data) {
-		return Can::readFlag<BYTE_INDEX, BIT_MASK, BIT_MASK>(data);
-	}
+    template<uint8_t BYTE_INDEX, uint8_t BIT_MASK, uint8_t COMPARE_VALUE>
+    static bool readFlag(uint8_t * data) {
+        return (data[BYTE_INDEX] & BIT_MASK) == COMPARE_VALUE;
+    }
+    template<uint8_t BYTE_INDEX, uint8_t BIT_MASK>
+    static inline bool readFlag(uint8_t * data) {
+        return Can::readFlag<BYTE_INDEX, BIT_MASK, BIT_MASK>(data);
+    }
 
-	void write(INT32U id, INT8U ext, INT8U len, INT8U *buf) {
-		if (!this->isInitialized) {
-			canNotInitializedError.serialize(this->serial, 1000);
-			return;
-		}
+    void write(INT32U id, INT8U ext, INT8U len, INT8U *buf) {
+        if (!this->isInitialized) {
+            canNotInitializedError.serialize(this->serial, 1000);
+            return;
+        }
 
-		uint8_t result = this->can->sendMsgBuf(id, ext, len, buf);
-		if (result == CAN_GETTXBFTIMEOUT) {
-			canSendBufferFull.serialize(serial, 1000);
-		} else if (result == CAN_SENDMSGTIMEOUT) {
-			/*
-			 * Happens almost every second, thus popping up errors constantly.
-			 * TODO: Maybe reintroduce this as a warning (no notification)?
-			 * canSendTimeout.serialize(serial, 1000);
-			 */
-		}
-	}
+        uint8_t result = this->can->sendMsgBuf(id, ext, len, buf);
+        if (result == CAN_GETTXBFTIMEOUT) {
+            canSendBufferFull.serialize(serial, 1000);
+        } else if (result == CAN_SENDMSGTIMEOUT) {
+            /*
+             * Happens almost every second, thus popping up errors constantly.
+             * TODO: Maybe reintroduce this as a warning (no notification)?
+             * canSendTimeout.serialize(serial, 1000);
+             */
+        }
+    }
 private:
-	MCP_CAN * can;
-	Stream * serial;
+    MCP_CAN * can;
+    Stream * serial;
 
-	uint8_t canInterruptPin = 2;
-	boolean isInitialized = false;
-	boolean isSniffing = false;
+    uint8_t canInterruptPin = 2;
+    boolean isInitialized = false;
+    boolean isSniffing = false;
 
-	bool inTransaction = false;
-	long unsigned int currentCanPacketId = 0;
-	uint8_t currentCanPacketLength = 0;
-	unsigned char currentCanPacketData[8];
+    bool inTransaction = false;
+    long unsigned int currentCanPacketId = 0;
+    uint8_t currentCanPacketLength = 0;
+    unsigned char currentCanPacketData[8];
 
-	void sniff() {
-		snifferPacket.payload()->header.canId = this->currentCanPacketId;
-		for (uint8_t i = 0; i < 8; i++) {
-			uint8_t data = 0x00;
-			if (i < this->currentCanPacketLength) {
-				data = this->currentCanPacketData[i];
-			}
-			snifferPacket.payload()->data[i] = data;
-		}
-		snifferPacket.serialize(this->serial);
-	}
+    void sniff() {
+        snifferPacket.payload()->header.canId = this->currentCanPacketId;
+        for (uint8_t i = 0; i < 8; i++) {
+            uint8_t data = 0x00;
+            if (i < this->currentCanPacketLength) {
+                data = this->currentCanPacketData[i];
+            }
+            snifferPacket.payload()->data[i] = data;
+        }
+        snifferPacket.serialize(this->serial);
+    }
 };
 
 #endif /* CAN_H_ */
