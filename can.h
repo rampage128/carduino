@@ -69,9 +69,13 @@ public:
 	}
 
 	void endTransaction() {
-		if (this->can->checkError() == CAN_CTRLERROR) {
-			canControlError.serialize(this->serial, 1000);
-		}
+		/*
+		 * Happens almost every second, thus popping up errors constantly.
+		 * TODO: Maybe reintroduce this as a warning (no notification)?
+		 * if (this->can->checkError() == CAN_CTRLERROR) {
+		 * 	canControlError.serialize(this->serial, 1000);
+		 * }
+		 */
 		this->inTransaction = false;
 	}
 
@@ -133,7 +137,11 @@ public:
 		if (result == CAN_GETTXBFTIMEOUT) {
 			canSendBufferFull.serialize(serial, 1000);
 		} else if (result == CAN_SENDMSGTIMEOUT) {
-			canSendTimeout.serialize(serial, 1000);
+			/*
+			 * Happens almost every second, thus popping up errors constantly.
+			 * TODO: Maybe reintroduce this as a warning (no notification)?
+			 * canSendTimeout.serialize(serial, 1000);
+			 */
 		}
 	}
 private:
