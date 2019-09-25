@@ -125,8 +125,7 @@ private:
 
         // Prepare sleep mode
         set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-        sleep_enable()
-        ;
+        sleep_enable();
 
         // prevent interrupts before sleeping to avoid accidentally
         // detaching the wake up interrupt.
