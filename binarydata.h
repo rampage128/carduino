@@ -64,7 +64,7 @@ public:
     BinaryData::LongResult readLong() {
         BinaryData::LongResult result = _data->readLong(_position);
         if (result.state == BinaryData::OK) {
-            _position++;
+            _position += 4;
         }
         return result;
     }
