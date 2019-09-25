@@ -10,10 +10,11 @@ static SerialPacket carDataReadError(0x65, 0x02);
 static SerialPacket carDataFullError(0x65, 0x03);
 
 union CarduinoProtocolVersion {
-    unsigned char data[3] = { 0x01, 0x00, 0x00 };
+    unsigned char data[4] = { 0x01, 0x00, 0x00, 0x00 };
     BitFieldMember<0, 8> major;
-    BitFieldMember<8, 16> minor;
-    BitFieldMember<16, 24> revision;
+    BitFieldMember<8, 8> minor;
+    BitFieldMember<16, 8> revision;
+    BitFieldMember<24, 8> deviceTypeIdentifier;
 };
 static SerialDataPacket<CarduinoProtocolVersion> ping(0x61, 0x00);
 
@@ -31,10 +32,12 @@ private:
     void (*serialEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer) = NULL;
 public:
     Carduino(HardwareSerial * serial,
+            uint8_t deviceTypeIdentifier,
             void (*userEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer)) {
         this->serialReader = new SerialReader(128, serial);
         this->serialEvent = userEvent;
         this->serial = serial;
+        ping.payload()->deviceTypeIdentifier = deviceTypeIdentifier;
     }
     ~Carduino() {
         delete this->serialReader;
@@ -75,10 +78,14 @@ public:
         switch (type) {
         case 0x61:
             switch (id) {
-            case 0x00: // Connection request
-                this->isConnectedFlag = true;
-                startup.serialize(this->serial);
+            case 0x00: { // Connection request
+                BinaryData::ByteResult majorVersionResult = payloadBuffer->readByte();
+                if (majorVersionResult.state == BinaryData::OK && majorVersionResult.data == ping.payload()->major) {
+                    this->isConnectedFlag = true;
+                    startup.serialize(this->serial);
+                }
                 break;
+            }
             case 0x0a: // start sniffer
                 if (this->can) {
                     this->can->startSniffer();

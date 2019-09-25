@@ -13,7 +13,7 @@
 
 Can can(&Serial, 5, 6);
 PowerManager powerManager(&Serial, 3, 4);
-Carduino carduino(&Serial, onCarduinoSerialEvent);
+Carduino carduino(&Serial, 0x4c, onCarduinoSerialEvent);
 
 NissanClimateControl nissanClimateControl;
 NissanSteeringControl nissanSteeringControl(A0, A1);
