@@ -4,6 +4,7 @@
 #include "Arduino.h"
 #include <avr/sleep.h>
 #include <SPI.h>
+#include "serialpacket.h"
 
 static volatile uint8_t interruptPinStateOnWake = 0;
 
@@ -79,6 +80,7 @@ private:
     template<uint8_t INTERRUPT_PIN>
     void sleep(void (*wakeCallback)(void), uint8_t interruptType,
             uint32_t interruptDuration, uint32_t chargeDuration) {
+
         // flash LED
         pinMode(13, OUTPUT);
         for (int i = 0; i < 3; i++) {
@@ -202,10 +204,6 @@ public:
         }
 
         if (sleepCallback()) {
-            // Flush serial and terminate connection
-            Serial.flush();
-            Serial.end();
-
             // Turn off SPI
             SPI.end();
 
