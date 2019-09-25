@@ -4,6 +4,7 @@
 #include <mcp_can.h>
 #include "bitfield.h"
 #include "serialpacket.h"
+#include "carsystems.h"
 
 static SerialPacket canInitError(0x65, 0x30);
 
@@ -33,6 +34,9 @@ public:
     }
     ~Can() {
         delete this->can;
+        for (int i = 0; i < this->carDataCount; i++) {
+            delete this->carData[i];
+        }
     }
     boolean setup(uint8_t mode, uint8_t speed, uint8_t clock) {
         uint8_t canStatus = this->can->begin(mode, speed, clock);
@@ -46,39 +50,6 @@ public:
         return this->isInitialized;
     }
 
-    void beginTransaction() {
-        if (!this->isInitialized) {
-            canNotInitializedError.serialize(this->serial, 1000);
-            return;
-        }
-
-        if (this->inTransaction) {
-            canTransactionError.serialize(this->serial, 1000);
-            return;
-        }
-
-        if (!digitalRead(canInterruptPin)) {
-            this->inTransaction = true;
-
-            this->can->readMsgBuf(&this->currentCanPacketId,
-                    &this->currentCanPacketLength, this->currentCanPacketData);
-            if (this->isSniffing) {
-                this->sniff();
-            }
-        }
-    }
-
-    void endTransaction() {
-        /*
-         * Happens almost every second, thus popping up errors constantly.
-         * TODO: Maybe reintroduce this as a warning (no notification)?
-         * if (this->can->checkError() == CAN_CTRLERROR) {
-         * 	canControlError.serialize(this->serial, 1000);
-         * }
-         */
-        this->inTransaction = false;
-    }
-
     void startSniffer() {
         this->isSniffing = true;
     }
@@ -87,34 +58,51 @@ public:
         this->isSniffing = false;
     }
 
-    template<typename T>
-    void updateFromCan(long unsigned int canId, SerialDataPacket<T> * packet,
-            void (*callback)(long unsigned int id, unsigned char len,
-                    unsigned char data[8], T * carSystem)) {
+    bool addCanPacket(uint32_t canId, uint8_t mask) {
+        if (this->carDataCount < 50) {
+            this->removeCanPacket(canId);
+            this->carData[this->carDataCount] = new CarData(canId, mask);
+            this->carDataCount++;
+            return true;
+        }
 
-        if (!this->inTransaction) {
-            /*
-             * Intentionally return silently.
-             * beginTransaction only starts a transaction if a can-packet was
-             * received.
-             */
+        return false;
+    }
+
+    void removeCanPacket(uint32_t canId) {
+        for (int index = 0; index < this->carDataCount; index++) {
+            CarData * data = this->carData[index];
+            if (data->getCanId() == canId) {
+                for (int moveIndex = index; moveIndex < this->carDataCount - 1; moveIndex++) {
+                    this->carData[moveIndex] = this->carData[moveIndex + 1];
+                }
+                delete data;
+                this->carDataCount--;
+            }
+        }
+    }
+
+    void updateFromCan(void (*canCallback)(uint32_t canId, uint8_t data[], uint8_t length)) {
+        if (!this->isInitialized) {
+            canNotInitializedError.serialize(this->serial, 1000);
             return;
         }
 
-        if (canId == this->currentCanPacketId) {
-            int dataLength = sizeof(T);
-            T * carSystem = new T();
-            memcpy(carSystem, packet->payload(), dataLength);
+        if (!digitalRead(canInterruptPin)) {
+            long unsigned int canId = 0;
+            uint8_t canLength = 0;
+            uint8_t canData[8];
 
-            callback(this->currentCanPacketId, this->currentCanPacketLength,
-                    this->currentCanPacketData, carSystem);
-
-            if (memcmp(carSystem, packet->payload(), dataLength) != 0) {
-                memcpy(packet->payload(), carSystem, dataLength);
-                packet->serialize(this->serial);
+            this->can->readMsgBuf(&canId, &canLength, canData);
+            if (this->isSniffing) {
+                this->sniff(canId, canData, canLength);
+            } else {
+                for (uint8_t i = 0; i < this->carDataCount; i++) {
+                    if (this->carData[i]->serialize(canId, canData, this->serial)) {
+                        canCallback(canId, canData, canLength);
+                    }
+                }
             }
-
-            delete carSystem;
         }
     }
 
@@ -147,22 +135,19 @@ public:
 private:
     MCP_CAN * can;
     Stream * serial;
+    CarData * carData[50];
+    uint8_t carDataCount = 0;
 
     uint8_t canInterruptPin = 2;
     boolean isInitialized = false;
     boolean isSniffing = false;
 
-    bool inTransaction = false;
-    long unsigned int currentCanPacketId = 0;
-    uint8_t currentCanPacketLength = 0;
-    unsigned char currentCanPacketData[8];
-
-    void sniff() {
-        snifferPacket.payload()->header.canId = this->currentCanPacketId;
+    void sniff(uint32_t canId, uint8_t canData[], uint8_t length) {
+        snifferPacket.payload()->header.canId = canId;
         for (uint8_t i = 0; i < 8; i++) {
             uint8_t data = 0x00;
-            if (i < this->currentCanPacketLength) {
-                data = this->currentCanPacketData[i];
+            if (i < length) {
+                data = canData[i];
             }
             snifferPacket.payload()->data[i] = data;
         }

@@ -6,6 +6,8 @@
 #include "power.h"
 
 static SerialPacket baudRateReadError(0x65, 0x01);
+static SerialPacket carDataReadError(0x65, 0x02);
+static SerialPacket carDataFullError(0x65, 0x03);
 
 union CarduinoProtocolVersion {
     unsigned char data[3] = { 0x01, 0x00, 0x00 };
@@ -87,6 +89,20 @@ public:
                     this->can->stopSniffer();
                 }
                 break;
+            case 0x63: {
+                BinaryData::LongResult canIdResult = payloadBuffer->readLong();
+                BinaryData::ByteResult maskResult = payloadBuffer->readByte();
+                if (canIdResult.state == BinaryData::OK && maskResult.state == BinaryData::OK) {
+                    if (this->can) {
+                        if (!this->can->addCanPacket(canIdResult.data, maskResult.data)) {
+                            carDataFullError.serialize(this->serial);;
+                        }
+                    }
+                } else {
+                    carDataReadError.serialize(this->serial);
+                }
+                break;
+            }
             case 0x72: { // set baud rate
                 BinaryData::LongResult result = payloadBuffer->readLong();
                 if (result.state == BinaryData::OK) {

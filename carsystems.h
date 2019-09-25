@@ -1,50 +1,67 @@
 #ifndef CARSYSTEMS_H_
 #define CARSYSTEMS_H_
 
-#include "bitfield.h"
-#include "serialpacket.h"
+#include "network.h"
 
-union ClimateControl {
-    unsigned char data[3] = { 0x00, 0x00, 0x00 };
-    BitFieldMember<0, 1> isAcOn;
-    BitFieldMember<1, 1> isAuto;
-    BitFieldMember<2, 1> isAirductWindshield;
-    BitFieldMember<3, 1> isAirductFace;
-    BitFieldMember<4, 1> isAirductFeet;
-    BitFieldMember<5, 1> isWindshieldHeating;
-    BitFieldMember<6, 1> isRearWindowHeating;
-    BitFieldMember<7, 1> isRecirculation;
-    BitFieldMember<8, 8> fanLevel;
-    BitFieldMember<16, 8> desiredTemperature;
-};
-SerialDataPacket<ClimateControl>* climateControl = new SerialDataPacket<
-        ClimateControl>(0x73, 0x63);
+class CarData {
+private:
+    uint32_t canId;
+    uint8_t * data;
+    uint8_t mask;
+    uint8_t length = 0;
+public:
+    CarData(uint32_t canId, uint8_t mask) {
+        this->mask = mask;
+        this->canId = canId;
+        for (uint8_t i = 0; i < 8; i++) {
+            if (mask & 1 << i) {
+                this->length++;
+            }
+        }
+        this->data = (uint8_t*) calloc(sizeof(char), this->length);
+    }
+    ~CarData() {
+        free(this->data);
+    }
+    uint32_t getCanId() {
+        return this->canId;
+    }
+    void setMask(uint8_t mask) {
+        this->mask = mask;
+    }
+    boolean serialize(uint32_t canId, uint8_t canData[8], Stream * serial) {
+        if (this->canId != canId) {
+            return false;
+        }
 
-union DriveTrain {
-    unsigned char data[2] = { 0x00, 0x00 };
-    BitFieldMember<0, 8> gearNum;
-    BitFieldMember<8, 1> isSynchroRev;
-};
-SerialDataPacket<DriveTrain>* driveTrain = new SerialDataPacket<DriveTrain>(
-        0x73, 0x67);
+        bool dataChanged = false;
+        uint8_t index = 0;
+        for (uint8_t i = 0; i < 8; i++) {
+            if (mask & 1 << (7 - i)) {
+                uint8_t dataByte = canData[i];
+                if (this->data[index] != dataByte) {
+                    this->data[index] = dataByte;
+                    dataChanged = true;
+                }
+                index++;
+            }
+        }
 
-union PowerState {
-    unsigned char data[1] = { 0x00 };
-    BitFieldMember<0, 1> isAccessoryOn;
-    BitFieldMember<1, 1> isIgnitionOn;
-};
-SerialDataPacket<PowerState>* powerState = new SerialDataPacket<PowerState>(
-        0x73, 0x70);
+        if (dataChanged) {
+            uint32_t flippedCanId = htonl(this->canId);
+            serial->write("{");
+            serial->write(0x62);
+            serial->write(0x01);
+            serial->write(this->length + 0x04);
+            serial->write((byte*)&flippedCanId, sizeof(this->canId));
+            for (uint8_t i = 0; i < this->length; i++) {
+                serial->write(this->data[i]);
+            }
+            serial->write("}");
+        }
 
-union Doors {
-    unsigned char data[1] = { 0x00 };
-    BitFieldMember<0, 1> isFrontLeftOpen;
-    BitFieldMember<1, 1> isFrontRightOpen;
-    BitFieldMember<2, 1> isRearLeftOpen;
-    BitFieldMember<3, 1> isRearRightOpen;
-    BitFieldMember<4, 1> isTrunkOpen;
-    BitFieldMember<5, 1> isHoodOpen;
+        return dataChanged;
+    }
 };
-SerialDataPacket<Doors>* doors = new SerialDataPacket<Doors>(0x73, 0x64);
 
 #endif /* CARSYSTEMS_H_ */
