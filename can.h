@@ -94,7 +94,7 @@ public:
             uint8_t canData[8];
 
             this->can->readMsgBuf(&canId, &canLength, canData);
-            if (this->isSniffing) {
+            if (this->isSniffing || this->carDataCount < 1) {
                 this->sniff(canId, canData, canLength);
             } else {
                 for (uint8_t i = 0; i < this->carDataCount; i++) {
