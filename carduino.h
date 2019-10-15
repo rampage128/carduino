@@ -1,6 +1,7 @@
 #ifndef CARDUINO_H_
 #define CARDUINO_H_
 
+#include <EEPROM.h>
 #include "serial.h"
 #include "can.h"
 #include "power.h"
@@ -8,15 +9,27 @@
 static SerialPacket baudRateReadError(0x65, 0x01);
 static SerialPacket carDataReadError(0x65, 0x02);
 static SerialPacket carDataFullError(0x65, 0x03);
+static SerialPacket tooManyFeaturesError(0x65, 0x04);
+static SerialPacket idChangeError(0x65, 0x05);
 
-union CarduinoProtocolVersion {
-    unsigned char data[4] = { 0x01, 0x00, 0x00, 0x00 };
+union CarduinoPing {
+    unsigned char data[6] = { 0x01, 0x00, 0x00, 0x41, 0x41, 0x41 };
     BitFieldMember<0, 8> major;
     BitFieldMember<8, 8> minor;
     BitFieldMember<16, 8> revision;
-    BitFieldMember<24, 8> deviceTypeIdentifier;
+    BitFieldMember<24, 8> type1;
+    BitFieldMember<32, 8> type2;
+    BitFieldMember<40, 8> type3;
 };
-static SerialDataPacket<CarduinoProtocolVersion> ping(0x61, 0x00);
+static SerialDataPacket<CarduinoPing> ping(0x61, 0x00);
+
+union CarduinoIdChange {
+    unsigned char data[3] = { 0x00, 0x00, 0x00 };
+    BitFieldMember<0, 8> type1;
+    BitFieldMember<8, 8> type2;
+    BitFieldMember<16, 8> type3;
+};
+static SerialDataPacket<CarduinoIdChange> idChange(0x61, 0x49);
 
 static SerialPacket startup(0x61, 0x01);
 static SerialDataPacket<unsigned long> baudRatePacket(0x61, 0x02);
@@ -32,12 +45,14 @@ private:
     void (*serialEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer) = NULL;
 public:
     Carduino(HardwareSerial * serial,
-            uint8_t deviceTypeIdentifier,
             void (*userEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer)) {
         this->serialReader = new SerialReader(128, serial);
         this->serialEvent = userEvent;
         this->serial = serial;
-        ping.payload()->deviceTypeIdentifier = deviceTypeIdentifier;
+
+        ping.payload()->type1 = EEPROM.read(0);
+        ping.payload()->type2 = EEPROM.read(1);
+        ping.payload()->type3 = EEPROM.read(2);
     }
     ~Carduino() {
         delete this->serialReader;
@@ -79,8 +94,10 @@ public:
         case 0x61:
             switch (id) {
             case 0x00: { // Connection request
-                BinaryData::ByteResult majorVersionResult = payloadBuffer->readByte();
-                if (majorVersionResult.state == BinaryData::OK && majorVersionResult.data == ping.payload()->major) {
+                BinaryData::ByteResult majorVersionResult =
+                        payloadBuffer->readByte();
+                if (majorVersionResult.state == BinaryData::OK
+                        && majorVersionResult.data == ping.payload()->major) {
                     this->isConnectedFlag = true;
                     startup.serialize(this->serial);
                 }
@@ -96,13 +113,40 @@ public:
                     this->can->stopSniffer();
                 }
                 break;
+            case 0x49: {
+                BinaryData::ByteResult type1 = payloadBuffer->readByte();
+                BinaryData::ByteResult type2 = payloadBuffer->readByte();
+                BinaryData::ByteResult type3 = payloadBuffer->readByte();
+                if (type1.state == BinaryData::OK
+                        && type2.state == BinaryData::OK
+                        && type3.state == BinaryData::OK) {
+                    EEPROM.update(0, type1.data);
+                    EEPROM.update(1, type2.data);
+                    EEPROM.update(2, type3.data);
+
+                    ping.payload()->type1 = type1.data;
+                    ping.payload()->type2 = type2.data;
+                    ping.payload()->type3 = type3.data;
+
+                    idChange.payload()->type1 = type1.data;
+                    idChange.payload()->type2 = type2.data;
+                    idChange.payload()->type3 = type3.data;
+                    idChange.serialize(this->serial, 0);
+                } else {
+                    idChangeError.serialize(this->serial, 0);
+                }
+                break;
+            }
             case 0x63: {
                 BinaryData::LongResult canIdResult = payloadBuffer->readLong();
                 BinaryData::ByteResult maskResult = payloadBuffer->readByte();
-                if (canIdResult.state == BinaryData::OK && maskResult.state == BinaryData::OK) {
+                if (canIdResult.state == BinaryData::OK
+                        && maskResult.state == BinaryData::OK) {
                     if (this->can) {
-                        if (!this->can->addCanPacket(canIdResult.data, maskResult.data)) {
-                            carDataFullError.serialize(this->serial);;
+                        if (!this->can->addCanPacket(canIdResult.data,
+                                maskResult.data)) {
+                            carDataFullError.serialize(this->serial);
+                            ;
                         }
                     }
                 } else {
