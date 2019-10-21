@@ -42,10 +42,10 @@ private:
     Can * can = NULL;
     PowerManager * powerManager = NULL;
     bool isConnectedFlag = false;
-    void (*serialEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer) = NULL;
+    void (*serialEvent)(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer) = NULL;
 public:
     Carduino(HardwareSerial * serial,
-            void (*userEvent)(uint8_t eventId, BinaryBuffer *payloadBuffer)) {
+            void (*userEvent)(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer)) {
         this->serialReader = new SerialReader(128, serial);
         this->serialEvent = userEvent;
         this->serial = serial;
@@ -82,6 +82,7 @@ public:
         delay(1000);
     }
     void end() {
+        this->triggerEvent(2);
         shutdown.serialize(this->serial);
         this->serial->flush();
         this->serial->end();
@@ -100,6 +101,7 @@ public:
                         && majorVersionResult.data == ping.payload()->major) {
                     this->isConnectedFlag = true;
                     startup.serialize(this->serial);
+                    this->triggerEvent(1);
                 }
                 break;
             }
@@ -169,9 +171,9 @@ public:
             }
             }
             break;
-        case 0x63:
+        default:
             if (this->serialEvent) {
-                this->serialEvent(id, payloadBuffer);
+                this->serialEvent(type, id, payloadBuffer);
             }
             break;
         }

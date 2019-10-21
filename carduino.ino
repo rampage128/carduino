@@ -15,7 +15,7 @@ Can can(&Serial, 5, 6);
 PowerManager powerManager(&Serial, 3, 4);
 Carduino carduino(&Serial, onCarduinoSerialEvent);
 
-NissanClimateControl nissanClimateControl;
+//NissanClimateControl nissanClimateControl;
 NissanSteeringControl nissanSteeringControl(A0, A1);
 
 Timer sleepTimer;
@@ -31,7 +31,6 @@ void setup() {
     carduino.addCan(&can);
     carduino.addPowerManager(&powerManager);
     can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
-    carduino.triggerEvent(1);
 }
 
 void loop() {
@@ -43,8 +42,10 @@ void serialEvent() {
     carduino.readSerial();
 }
 
-void onCarduinoSerialEvent(uint8_t eventId, BinaryBuffer *payloadBuffer) {
-    nissanClimateControl.push(eventId, payloadBuffer);
+void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer) {
+    UNUSED(id);
+    can.forwardFromSerial(type, payloadBuffer);
+    //nissanClimateControl.push(eventId, payloadBuffer);
 }
 
 void onLoop() {
@@ -53,9 +54,11 @@ void onLoop() {
 
         nissanSteeringControl.check(&carduino);
 
+        /*
         every(250) {
             nissanClimateControl.broadcast(can);
         }
+        */
     }
 }
 
@@ -71,7 +74,6 @@ bool onSleep() {
     }
 
     if (shouldSleep) {
-        carduino.triggerEvent(2);
         carduino.end();
     }
 
@@ -84,7 +86,6 @@ void onWakeUp() {
     sleepTimer.reset();
     carduino.begin();
     can.setup(MCP_ANY, CAN_500KBPS, MCP_8MHZ);
-    carduino.triggerEvent(3);
 }
 
 void onCan(uint32_t canId, uint8_t data[], uint8_t len) {
