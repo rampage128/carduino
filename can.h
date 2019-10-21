@@ -82,6 +82,27 @@ public:
         }
     }
 
+    void forwardFromSerial(uint8_t type, BinaryBuffer *payloadBuffer) {
+        if (type != 0x62) {
+            return;
+        }
+
+        BinaryData::LongResult idResult = payloadBuffer->readLong();
+
+        if (idResult.state == BinaryData::AccessStatus::OK) {
+            uint8_t data[8];
+            for (uint8_t i = 0; i < payloadBuffer->getSize() - 4 && i < 8; i++) {
+                BinaryData::ByteResult byteResult = payloadBuffer->readByte();
+                if (byteResult.state == BinaryData::AccessStatus::OK) {
+                    data[i] = byteResult.data;
+                }
+            }
+
+            this->write(idResult.data, 0, payloadBuffer->getSize() - 4,
+                (uint8_t*) data);
+        }
+    }
+
     void updateFromCan(void (*canCallback)(uint32_t canId, uint8_t data[], uint8_t length)) {
         if (!this->isInitialized) {
             canNotInitializedError.serialize(this->serial, 1000);
