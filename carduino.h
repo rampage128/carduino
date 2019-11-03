@@ -71,7 +71,7 @@ public:
         if (!this->isConnectedFlag) {
             ping.serialize(this->serial, 500);
         } else {
-            if (millis() - this->lastSerialEvent >= 1000) {
+            if (((uint32_t)millis() - this->lastSerialEvent) >= 1000) {
                 this->isConnectedFlag = false;
                 this->timeoutCallback();
             }
