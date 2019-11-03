@@ -42,12 +42,16 @@ private:
     Can * can = NULL;
     PowerManager * powerManager = NULL;
     bool isConnectedFlag = false;
+    uint32_t lastSerialEvent = 0;
     void (*serialEvent)(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer) = NULL;
+    void (*timeoutCallback)(void) = NULL;
 public:
     Carduino(HardwareSerial * serial,
-            void (*userEvent)(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer)) {
+            void (*userEvent)(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer),
+            void (*timeoutCallback)(void)) {
         this->serialReader = new SerialReader(128, serial);
         this->serialEvent = userEvent;
+        this->timeoutCallback = timeoutCallback;
         this->serial = serial;
 
         ping.payload()->type1 = EEPROM.read(0);
@@ -61,11 +65,17 @@ public:
     bool isConnected() {
         if (!this->isConnectedFlag) {
             ping.serialize(this->serial, 500);
+        } else {
+            if (millis() - this->lastSerialEvent >= 1000) {
+                this->isConnectedFlag = false;
+                this->timeoutCallback();
+            }
         }
         return this->isConnectedFlag;
     }
     void readSerial() {
         this->serialReader->read(this);
+        this->lastSerialEvent = millis();
     }
     void triggerEvent(uint8_t eventNum) {
         SerialPacket carduinoEvent(0x63, eventNum);

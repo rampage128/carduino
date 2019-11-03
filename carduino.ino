@@ -13,7 +13,7 @@
 
 Can can(&Serial, 5, 6);
 PowerManager powerManager(&Serial, 3, 4);
-Carduino carduino(&Serial, onCarduinoSerialEvent);
+Carduino carduino(&Serial, onCarduinoSerialEvent, onCarduinoSerialTimeout);
 
 //NissanClimateControl nissanClimateControl;
 NissanSteeringControl nissanSteeringControl(A0, A1);
@@ -46,6 +46,14 @@ void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer
     UNUSED(id);
     can.forwardFromSerial(type, payloadBuffer);
     //nissanClimateControl.push(eventId, payloadBuffer);
+}
+
+void onCarduinoSerialTimeout() {
+    carduino.end();
+    powerManager.togglePeripherals(false);
+    delay(1000);
+    powerManager.togglePeripherals(true);
+    carduino.begin();
 }
 
 void onLoop() {
