@@ -51,7 +51,9 @@ void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer
 void onCarduinoSerialTimeout() {
     carduino.end();
     powerManager.togglePeripherals(false);
+    powerManager.toggleCharger(false);
     delay(1000);
+    powerManager.toggleCharger(true);
     powerManager.togglePeripherals(true);
     carduino.begin();
 }
