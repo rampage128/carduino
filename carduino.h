@@ -83,6 +83,8 @@ public:
     }
     void end() {
         this->triggerEvent(2);
+        this->serial->flush();
+        delay(500);
         shutdown.serialize(this->serial);
         this->serial->flush();
         this->serial->end();
