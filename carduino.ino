@@ -38,10 +38,6 @@ void loop() {
             onWakeUp, onLoop);
 }
 
-void serialEvent() {
-    carduino.readSerial();
-}
-
 void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer) {
     UNUSED(id);
     can.forwardFromSerial(type, payloadBuffer);
@@ -59,7 +55,7 @@ void onCarduinoSerialTimeout() {
 }
 
 void onLoop() {
-    if (carduino.isConnected()) {
+    if (carduino.update()) {
         can.updateFromCan(onCan);
 
         nissanSteeringControl.check(&carduino);

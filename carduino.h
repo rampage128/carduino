@@ -62,7 +62,12 @@ public:
         delete this->serialReader;
         delete this->can;
     }
-    bool isConnected() {
+    bool update() {
+        if (this->serial->available()) {
+            this->lastSerialEvent = millis();
+            this->serialReader->read(this);
+        }
+
         if (!this->isConnectedFlag) {
             ping.serialize(this->serial, 500);
         } else {
@@ -72,10 +77,6 @@ public:
             }
         }
         return this->isConnectedFlag;
-    }
-    void readSerial() {
-        this->serialReader->read(this);
-        this->lastSerialEvent = millis();
     }
     void triggerEvent(uint8_t eventNum) {
         SerialPacket carduinoEvent(0x63, eventNum);
