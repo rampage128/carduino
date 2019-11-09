@@ -16,15 +16,6 @@ static SerialPacket canSendTimeout(0x65, 0x34);
 
 static SerialPacket canControlError(0x65, 0x35);
 
-struct CanData {
-    union {
-        unsigned char data[4];
-        BitFieldMember<0, 32> canId;
-    } header;
-    uint8_t data[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-};
-static SerialDataPacket<CanData> snifferPacket(0x62, 0x6d);
-
 class Can {
 public:
     Can(Stream * serial, uint8_t canInterruptPin, uint8_t canCsPin) {
@@ -164,15 +155,16 @@ private:
     boolean isSniffing = false;
 
     void sniff(uint32_t canId, uint8_t canData[], uint8_t length) {
-        snifferPacket.payload()->header.canId = canId;
-        for (uint8_t i = 0; i < 8; i++) {
-            uint8_t data = 0x00;
-            if (i < length) {
-                data = canData[i];
-            }
-            snifferPacket.payload()->data[i] = data;
+        uint32_t flippedCanId = htonl(canId);
+        this->serial->write("{");
+        this->serial->write(0x62);
+        this->serial->write(0x6d);
+        this->serial->write(length + 0x04);
+        this->serial->write((byte*)&flippedCanId, sizeof(canId));
+        for (uint8_t i = 0; i < length; i++) {
+            this->serial->write(canData[i]);
         }
-        snifferPacket.serialize(this->serial);
+        this->serial->write("}");
     }
 };
 
