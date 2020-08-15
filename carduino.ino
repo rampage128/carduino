@@ -11,6 +11,9 @@
 #define ONE_SECOND 1000UL
 #define ONE_MINUTE ONE_SECOND * 60
 
+void onCarduinoSerialTimeout();
+void onCarduinoSerialEvent(uint8_t type, uint8_t id, BinaryBuffer *payloadBuffer);
+
 Can can(&Serial, 5, 6);
 PowerManager powerManager(&Serial, 3, 4);
 Carduino carduino(&Serial, onCarduinoSerialEvent, onCarduinoSerialTimeout);
